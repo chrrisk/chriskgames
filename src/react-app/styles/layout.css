@@ -1,0 +1,250 @@
+/* ─── Shell ─── */
+.play-shell {
+	min-height: 100vh;
+	background: var(--bg);
+	color: var(--text);
+	display: flex;
+	flex-direction: column;
+	position: relative;
+}
+
+.play-shell::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: radial-gradient(ellipse 90% 55% at 50% -18%, rgba(224, 123, 68, 0.09), transparent 70%);
+}
+
+/* ─── Header ─── */
+.play-header {
+	padding: 0.8rem 1.75rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	position: sticky;
+	top: 0;
+	z-index: 20;
+	background: rgba(15, 13, 11, 0.82);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	border-bottom: 1px solid var(--border);
+}
+
+.play-header .brand {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	color: inherit;
+}
+
+.play-header .brand img {
+	width: 38px;
+	height: 38px;
+	border-radius: 10px;
+	border: 1px solid var(--border-strong);
+	object-fit: cover;
+}
+
+.brand-label {
+	margin: 0;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	font-size: 0.6rem;
+	font-weight: 600;
+	color: var(--accent);
+}
+
+.brand-page {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: 1.05rem;
+	color: var(--text);
+	line-height: 1.2;
+}
+
+.header-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-left: auto;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+/* ─── Main column ─── */
+.doc {
+	max-width: 1024px;
+	width: 100%;
+	margin: 0 auto;
+	padding: 2.5rem 1.5rem 4rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	position: relative;
+	z-index: 1;
+}
+
+/* ─── Cards ─── */
+.doc-card {
+	background: var(--surface);
+	border-radius: var(--radius-lg);
+	padding: 2rem 1.8rem;
+	border: 1px solid var(--border);
+}
+
+.doc-card h2,
+.doc-card h1 {
+	margin: 0;
+}
+
+.doc-card p {
+	margin: 0.4rem 0 0;
+	color: var(--text-2);
+}
+
+/* ─── Footer ─── */
+.play-footer {
+	margin-top: auto;
+	padding: 1.75rem 2rem 2.25rem;
+	color: var(--text-3);
+	font-size: 0.8rem;
+	text-align: center;
+	border-top: 1px solid var(--border);
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+	align-items: center;
+}
+
+.play-footer nav {
+	display: flex;
+	gap: 1.25rem;
+}
+
+.play-footer nav a {
+	color: var(--text-3);
+}
+
+.play-footer nav a:hover {
+	color: var(--accent);
+}
+
+.play-footer p {
+	margin: 0;
+}
+
+/* ─── Countdown chip ─── */
+.reset-countdown {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.1rem;
+	font-size: 0.78rem;
+	color: var(--text-3);
+	text-align: right;
+}
+
+.reset-countdown strong {
+	font-size: 1.05rem;
+	color: var(--text);
+	letter-spacing: 0.06em;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ─── Modals ─── */
+.modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(10, 9, 8, 0.8);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+	z-index: 50;
+}
+
+.modal {
+	background: var(--surface-2);
+	padding: 1.75rem;
+	border-radius: var(--radius-lg);
+	border: 1px solid var(--border-strong);
+	max-width: 380px;
+	width: 100%;
+	box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+	text-align: center;
+}
+
+.modal h3 {
+	margin-top: 0;
+	font-size: 1.35rem;
+	color: var(--text);
+}
+
+.modal p {
+	margin: 0.5rem 0;
+	color: var(--text-2);
+}
+
+.modal a:not(.primary-btn) {
+	color: var(--accent);
+}
+
+.modal-link {
+	display: inline-block;
+	text-decoration: none;
+	text-align: center;
+	width: 100%;
+}
+
+.modal-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+	margin-top: 1.25rem;
+}
+
+/* ─── Maintenance ─── */
+.maintenance {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--bg);
+	color: var(--text);
+	text-align: center;
+	padding: 3rem 1.5rem;
+}
+
+.maintenance h1 {
+	font-size: 2.75rem;
+	margin: 0.5rem 0 0.75rem;
+}
+
+.maintenance p {
+	color: var(--text-2);
+	line-height: 1.6;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+	.play-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.6rem;
+	}
+
+	.header-actions {
+		width: 100%;
+		justify-content: space-between;
+	}
+
+	.reset-countdown {
+		margin-left: auto;
+	}
+}
