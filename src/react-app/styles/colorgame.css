@@ -1,0 +1,218 @@
+/* ─── Colorgame ─── */
+.cg-card {
+	max-width: 580px;
+	margin-left: auto;
+	margin-right: auto;
+	width: 100%;
+}
+
+.cg-title {
+	margin: 0.25rem 0 0.5rem;
+	font-size: 1.6rem;
+	color: var(--text);
+}
+
+.cg-swatch-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	margin: 1.25rem 0 0;
+}
+
+.cg-swatch {
+	width: 100%;
+	height: 200px;
+	border-radius: 14px;
+	border: 1px solid var(--border-strong);
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.cg-swatch-sm {
+	height: 120px;
+}
+
+.cg-timer-bar {
+	height: 6px;
+	width: 100%;
+	background: rgba(237, 224, 209, 0.08);
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.cg-timer-fill {
+	height: 100%;
+	background: var(--accent);
+	border-radius: 4px;
+	transition: width 0.9s linear;
+}
+
+.cg-guess-layout {
+	display: flex;
+	gap: 1.25rem;
+	align-items: flex-start;
+	margin: 1.25rem 0 1.25rem;
+}
+
+.cg-preview-swatch {
+	width: 140px;
+	flex-shrink: 0;
+	min-height: 190px;
+	border-radius: 14px;
+	border: 1px solid var(--border-strong);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	transition: background 0.04s ease;
+}
+
+.cg-sliders {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 1.1rem;
+}
+
+.cg-slider-row {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+
+.cg-label {
+	font-size: 0.75rem;
+	color: var(--text-3);
+	display: flex;
+	justify-content: space-between;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.07em;
+}
+
+.cg-label span {
+	color: var(--text-2);
+	font-variant-numeric: tabular-nums;
+}
+
+.cg-slider {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 100%;
+	height: 14px;
+	border-radius: 7px;
+	outline: none;
+	cursor: pointer;
+	border: 1px solid var(--border-strong);
+}
+
+.cg-slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: var(--text);
+	cursor: pointer;
+	border: 2px solid rgba(0, 0, 0, 0.3);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+}
+
+.cg-slider::-moz-range-thumb {
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: var(--text);
+	cursor: pointer;
+	border: 2px solid rgba(0, 0, 0, 0.3);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+}
+
+.cg-hue-slider {
+	background: linear-gradient(to right,
+		hsl(0,70%,50%), hsl(30,70%,50%), hsl(60,70%,50%),
+		hsl(90,70%,50%), hsl(120,70%,50%), hsl(150,70%,50%),
+		hsl(180,70%,50%), hsl(210,70%,50%), hsl(240,70%,50%),
+		hsl(270,70%,50%), hsl(300,70%,50%), hsl(330,70%,50%),
+		hsl(360,70%,50%));
+}
+
+.cg-result-swatches {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin: 1.25rem 0 0;
+}
+
+.cg-result-col {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.cg-result-sep {
+	font-size: 1rem;
+	color: var(--text-3);
+	flex-shrink: 0;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+}
+
+.cg-swatch-label {
+	margin: 0;
+	font-size: 0.72rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--text-3);
+	text-align: center;
+}
+
+.cg-score-list {
+	list-style: none;
+	padding: 0;
+	margin: 0.5rem 0 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.cg-score-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	font-size: 0.85rem;
+}
+
+.cg-score-row > span:first-child {
+	width: 64px;
+	color: var(--text-3);
+	flex-shrink: 0;
+}
+
+.cg-score-row > span:last-child {
+	width: 44px;
+	text-align: right;
+	flex-shrink: 0;
+}
+
+.cg-score-bar-wrap {
+	flex: 1;
+	height: 8px;
+	background: rgba(237, 224, 209, 0.07);
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.cg-score-bar {
+	height: 100%;
+	border-radius: 4px;
+	transition: width 0.6s ease;
+}
+
+@media (max-width: 500px) {
+	.cg-guess-layout {
+		flex-direction: column;
+	}
+
+	.cg-preview-swatch {
+		width: 100%;
+		min-height: 100px;
+	}
+}

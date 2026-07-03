@@ -1,0 +1,670 @@
+/* ─── Songgame layout ─── */
+.lab-doc {
+	gap: 1.5rem;
+}
+
+.lab-player-card {
+	display: flex;
+	flex-direction: column;
+	gap: 1.2rem;
+	position: relative;
+}
+
+.lab-player-top {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1.5rem;
+	align-items: flex-start;
+}
+
+.lab-player-top > div:first-child {
+	flex: 1 1 220px;
+}
+
+.lab-player-card audio {
+	width: 100%;
+	outline: none;
+}
+
+/* ─── Category pills ─── */
+.category-toggle {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	margin-top: 0.9rem;
+}
+
+.category-pill {
+	flex: 1 1 180px;
+	min-width: 200px;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--border);
+	background: var(--surface-2);
+	padding: 0.8rem 1rem;
+	color: var(--text);
+	text-align: left;
+	cursor: pointer;
+	transition: all 0.18s ease;
+	display: block;
+	position: relative;
+	font-family: inherit;
+}
+
+.category-pill-content {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.category-pill-text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+
+.category-pill:hover {
+	border-color: var(--border-strong);
+	background: var(--surface-3);
+	transform: translateY(-1px);
+}
+
+.category-pill.active {
+	border-color: var(--accent);
+	background: var(--accent-dim);
+}
+
+.category-pill.success {
+	border-color: var(--success);
+	box-shadow: 0 8px 24px rgba(133, 216, 166, 0.12);
+}
+
+.category-pill.failure {
+	border-color: var(--danger);
+	box-shadow: 0 8px 24px rgba(239, 123, 109, 0.12);
+}
+
+.category-pill.holiday {
+	border-color: rgba(255, 218, 224, 0.55);
+	background: linear-gradient(135deg, rgba(255, 236, 240, 0.82), rgba(214, 236, 229, 0.68));
+	box-shadow: 0 8px 20px rgba(255, 215, 224, 0.25);
+}
+
+.category-pill.holiday.active {
+	border-color: rgba(255, 229, 235, 0.85);
+	background: linear-gradient(135deg, rgba(255, 242, 244, 0.95), rgba(214, 243, 232, 0.85));
+	box-shadow: 0 10px 24px rgba(255, 214, 220, 0.35);
+}
+
+.category-pill.holiday .category-pill-sub {
+	color: #7d5c5e;
+}
+
+.category-pill.holiday .category-pill-label {
+	color: #5a2f33;
+}
+
+.category-pill-label {
+	display: block;
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+.category-pill-sub {
+	display: block;
+	font-size: 0.78rem;
+	color: var(--text-3);
+	margin-top: 0.2rem;
+}
+
+.category-pill-emoji {
+	font-size: 1.5rem;
+	line-height: 1;
+	filter: drop-shadow(0 0 8px rgba(224, 123, 68, 0.25));
+}
+
+/* ─── Snippet progress ─── */
+.snippet-progress {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.snippet-progress-bar {
+	display: flex;
+	width: 100%;
+	height: 8px;
+	gap: 3px;
+}
+
+.snippet-progress-segment {
+	flex-basis: 0;
+	display: block;
+	position: relative;
+	height: 100%;
+	border-radius: 6px;
+	background: rgba(237, 224, 209, 0.05);
+	border: 1px solid var(--border);
+	overflow: hidden;
+	transition: border-color 0.3s ease;
+}
+
+.snippet-progress-segment::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(135deg, var(--accent-bright), var(--accent));
+	opacity: 0;
+	transition: opacity 0.3s ease;
+}
+
+.snippet-progress-segment.complete::after,
+.snippet-progress-segment.current::after {
+	opacity: 1;
+}
+
+.snippet-progress-segment.complete {
+	border-color: rgba(224, 123, 68, 0.45);
+}
+
+.snippet-progress-segment.current {
+	border-color: var(--accent-bright);
+	box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.snippet-progress-segment.locked::after {
+	opacity: 0.08;
+}
+
+.snippet-progress-segment.next {
+	border-color: rgba(231, 194, 106, 0.7);
+}
+
+.snippet-progress-segment.next::after {
+	background: linear-gradient(135deg, rgba(231, 194, 106, 0.7), rgba(231, 194, 106, 0.4));
+	opacity: 0.7;
+}
+
+/* ─── Controls ─── */
+.lab-controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+.lab-controls button {
+	min-width: 130px;
+}
+
+.ghost-btn.skip-btn {
+	border-color: rgba(224, 123, 68, 0.4);
+	background: var(--accent-dim);
+	color: var(--text);
+}
+
+.ghost-btn.skip-btn:hover {
+	border-color: var(--accent);
+}
+
+/* ─── Search panel ─── */
+.lab-search-panel {
+	margin-top: 0.5rem;
+	background: var(--bg-deep);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	padding: 1rem 1rem 0.8rem;
+}
+
+.lab-search {
+	display: flex;
+	gap: 0.8rem;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.lab-search input {
+	flex: 1;
+	min-width: 220px;
+	padding: 0.65rem 0.9rem;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--border-strong);
+	background: var(--surface);
+	color: var(--text);
+	font-family: inherit;
+	font-size: 0.95rem;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	outline: none;
+}
+
+.lab-search input:focus {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.lab-search input::placeholder {
+	color: var(--text-3);
+}
+
+.lab-status {
+	font-size: 0.82rem;
+	color: var(--text-3);
+}
+
+.lab-search-panel .lab-results {
+	margin-top: 0.6rem;
+}
+
+/* ─── Search results ─── */
+.lab-results {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	max-height: 0;
+	opacity: 0;
+	overflow: hidden;
+	padding-right: 0.2rem;
+	transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.lab-results.visible {
+	max-height: 22rem;
+	opacity: 1;
+	overflow-y: auto;
+}
+
+/* ─── Track cards ─── */
+.track-card {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.75rem 0.9rem;
+	border-radius: 10px;
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: all 0.15s ease;
+	width: 100%;
+	font-family: inherit;
+}
+
+.track-card:hover {
+	border-color: var(--border-strong);
+	background: var(--surface-3);
+	transform: translateY(-1px);
+}
+
+.track-card.selected {
+	border-color: var(--accent);
+	background: var(--accent-dim);
+	box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+.track-card.guessed {
+	border-color: rgba(239, 123, 109, 0.4);
+	background: transparent;
+	color: var(--text-3);
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.track-card.guessed:hover {
+	transform: none;
+}
+
+.track-meta {
+	display: flex;
+	gap: 0.85rem;
+	align-items: center;
+}
+
+.track-art {
+	width: 44px;
+	height: 44px;
+	border-radius: 6px;
+	object-fit: cover;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.track-name {
+	margin: 0;
+	font-weight: 600;
+	font-size: 0.9rem;
+	color: var(--text);
+}
+
+.track-detail {
+	margin: 0;
+	color: var(--text-3);
+	font-size: 0.8rem;
+}
+
+/* ─── Guess board ─── */
+.guess-board {
+	margin: 0.5rem 0;
+	padding: 1rem;
+	background: var(--bg-deep);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.guess-board-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+}
+
+.guess-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+	gap: 0.5rem;
+}
+
+.guess-tile {
+	min-height: 56px;
+	border-radius: 10px;
+	border: 1px solid var(--border);
+	background: var(--surface);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.4rem 0.5rem;
+	text-align: center;
+	font-weight: 600;
+	color: var(--text-3);
+	word-break: break-word;
+	font-size: 0.82rem;
+	transition: all 0.2s ease;
+}
+
+.guess-tile.active {
+	border-color: var(--accent);
+	color: var(--accent-bright);
+	background: var(--accent-dim);
+}
+
+.guess-tile.correct {
+	border-color: var(--success);
+	color: var(--success);
+	background: var(--success-dim);
+	box-shadow: 0 0 16px rgba(133, 216, 166, 0.12);
+}
+
+.guess-tile.incorrect {
+	border-color: var(--danger);
+	color: var(--danger);
+	background: var(--danger-dim);
+}
+
+.guess-tile.skip {
+	border-color: rgba(239, 123, 109, 0.6);
+	color: var(--danger);
+}
+
+.guess-tile.artist-match {
+	border-color: var(--warn);
+	color: var(--warn);
+	background: var(--warn-dim);
+}
+
+/* ─── Volume ─── */
+.lab-volume-toggle {
+	position: absolute;
+	top: 0.55rem;
+	right: 1rem;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	background: var(--surface-2);
+	padding: 0.3rem 0.65rem;
+	border-radius: 999px;
+	border: 1px solid var(--border);
+	z-index: 2;
+}
+
+.lab-volume-toggle button {
+	border: none;
+	background: transparent;
+	font-size: 0.95rem;
+	cursor: pointer;
+	color: var(--text);
+	padding: 0;
+}
+
+.lab-volume-toggle input[type="range"] {
+	width: 120px;
+	accent-color: var(--accent);
+}
+
+/* ─── Text bits ─── */
+.lab-hint {
+	margin: 0;
+	color: var(--text-3);
+	font-size: 0.85rem;
+}
+
+.lab-message {
+	margin: 0;
+	color: var(--warn);
+	font-size: 0.9rem;
+}
+
+.lab-error {
+	color: var(--danger);
+	margin: 0;
+	font-size: 0.85rem;
+}
+
+.share-feedback {
+	margin: 0;
+	font-size: 0.82rem;
+	color: var(--text-2);
+}
+
+.next-reset-hint {
+	font-weight: 600;
+	color: var(--text-2);
+	margin-top: 0.4rem;
+}
+
+/* ─── Results modal ─── */
+.results-modal {
+	max-width: 440px;
+}
+
+.results-list {
+	list-style: none;
+	padding: 0;
+	margin: 1rem 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+.results-list li {
+	padding: 0.55rem 0.85rem;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--border-strong);
+	text-align: left;
+}
+
+.results-list li.success {
+	border-color: var(--success);
+	color: var(--success);
+	background: var(--success-dim);
+}
+
+.results-list li.failure {
+	border-color: var(--danger);
+	color: var(--danger);
+	background: var(--danger-dim);
+}
+
+.results-list li.idle {
+	border-color: var(--border);
+	color: var(--text-3);
+}
+
+/* ─── Archive modal ─── */
+.archive-modal {
+	width: min(1100px, 96vw);
+	max-height: 88vh;
+	overflow: auto;
+}
+
+.archive-modal-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
+.archive-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+	gap: 1rem;
+}
+
+.archive-calendar,
+.archive-player {
+	background: var(--bg-deep);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	padding: 1rem;
+}
+
+.archive-calendar {
+	max-height: 66vh;
+	overflow: auto;
+}
+
+.archive-month + .archive-month {
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid var(--border);
+}
+
+.archive-month h4 {
+	margin: 0 0 0.75rem;
+	font-size: 0.82rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--text-3);
+}
+
+.archive-date-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+	gap: 0.5rem;
+}
+
+.archive-date-btn {
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--border);
+	background: var(--surface);
+	color: var(--text-2);
+	padding: 0.5rem;
+	font: inherit;
+	font-size: 0.78rem;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.archive-date-btn:hover {
+	border-color: var(--border-strong);
+	background: var(--surface-2);
+	transform: translateY(-1px);
+}
+
+.archive-date-btn.active {
+	background: var(--accent-dim);
+	border-color: var(--accent);
+	color: var(--accent-bright);
+}
+
+.archive-player {
+	display: flex;
+	flex-direction: column;
+	gap: 0.9rem;
+}
+
+.archive-category-toggle {
+	margin-top: 0;
+	flex-direction: column;
+}
+
+.archive-category-toggle .category-pill {
+	min-width: 0;
+	flex: 0 1 auto;
+}
+
+.archive-track-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.9rem;
+	padding: 1rem;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.archive-track-meta {
+	align-items: flex-start;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 860px) {
+	.archive-layout {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 640px) {
+	.lab-volume-toggle {
+		position: static;
+		margin-left: auto;
+		margin-bottom: 0.6rem;
+	}
+
+	.lab-volume-toggle input[type="range"] {
+		width: 110px;
+	}
+
+	.category-toggle {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.5rem;
+	}
+
+	.category-pill {
+		min-width: 0;
+		padding: 0.6rem 0.7rem;
+		font-size: 0.9rem;
+	}
+
+	.category-pill-sub {
+		font-size: 0.7rem;
+		display: block;
+	}
+
+	.category-pill-content {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.category-pill-emoji {
+		font-size: 1rem;
+	}
+}
+
+@media (max-width: 600px) {
+	.lab-search {
+		align-items: stretch;
+	}
+}
