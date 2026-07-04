@@ -1,32 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { PageShell } from "../components/PageShell";
 import { useClickSound } from "../lib/sound";
+import {
+	formatCountdownLabel,
+	getEasternDateKey,
+	getMillisecondsUntilNextEasternReset,
+} from "../lib/time";
+import {
+	ALL_CATEGORY_KEYS,
+	CATEGORY_LABELS,
+	HOLIDAY_CATEGORY,
+	formatArchiveDateLabel,
+	formatArchiveLongDate,
+	formatSecondsLabel,
+	getActiveCategoryKeysForDate,
+	groupDatesByMonth,
+	hasMatchingArtist,
+	isMatchingTrack,
+	mergeCategoryMap,
+	type CategoryKey,
+	type TrackResult,
+} from "./songgame-helpers";
 import "../styles/songgame.css";
 
-type TrackResult = {
-	id: string;
-	name: string;
-	artists: string;
-	album: string;
-	artwork?: string | null;
-	previewUrl?: string | null;
-	duration?: number | null;
-	provider?: string;
-	url?: string | null;
-};
-
 type GuessEntry = { track: TrackResult; correct: boolean; timestamp: number };
-
-const ALL_CATEGORY_KEYS = ["oldies", "modern", "holiday"] as const;
-type CategoryKey = (typeof ALL_CATEGORY_KEYS)[number];
-const DEFAULT_CATEGORY_ORDER: CategoryKey[] = ["oldies", "modern"];
-const HOLIDAY_CATEGORY: CategoryKey = "holiday";
-
-const CATEGORY_LABELS: Record<CategoryKey, { title: string; description: string; emoji: string }> = {
-	oldies: { title: "Oldies but Goodies", description: "Classic throwbacks", emoji: "📼" },
-	modern: { title: "2000s & Newer", description: "Fresh favorites", emoji: "🎧" },
-	holiday: { title: "Holiday Classics", description: "Seasonal favorites", emoji: "🎄" },
-};
 
 type CategoryStatus = "idle" | "success" | "failure";
 type CompletionModalState = { category: CategoryKey; status: "success" | "failure"; nextCategory?: CategoryKey };
@@ -64,13 +61,6 @@ type StoredState = {
 	solvedAtMap?: Partial<Record<CategoryKey, number | null>>;
 	selectedTracks?: Partial<Record<CategoryKey, TrackResult | null>>;
 };
-
-function mergeCategoryMap<T>(incoming: Partial<Record<CategoryKey, T>> | undefined, fallback: Record<CategoryKey, T>) {
-	return ALL_CATEGORY_KEYS.reduce((acc, key) => {
-		acc[key] = (incoming?.[key] ?? fallback[key]) as T;
-		return acc;
-	}, {} as Record<CategoryKey, T>);
-}
 
 const snippetDurations = [0.5, 1, 2, 5, 10, 15];
 const FULL_REVEAL_DURATION = 30;
@@ -166,7 +156,7 @@ export function SongGame() {
 				return {
 					key,
 					status: "success" as CategoryStatus,
-					shareLine: `${emoji} **${title}** — solved in ${timeLabel}`,
+					shareLine: `${emoji} **${title}**: solved in ${timeLabel}`,
 					displayLine: `${emoji} ${title}: solved in ${timeLabel}`,
 				};
 			}
@@ -174,14 +164,14 @@ export function SongGame() {
 				return {
 					key,
 					status: "failure" as CategoryStatus,
-					shareLine: `${emoji} **${title}** — gave up`,
+					shareLine: `${emoji} **${title}**: gave up`,
 					displayLine: `${emoji} ${title}: gave up`,
 				};
 			}
 			return {
 				key,
 				status: "idle" as CategoryStatus,
-				shareLine: `${emoji} **${title}** — in progress`,
+				shareLine: `${emoji} **${title}**: in progress`,
 				displayLine: `${emoji} ${title}: in progress`,
 			};
 		});
@@ -382,12 +372,14 @@ export function SongGame() {
 	}, [volume]);
 
 	useEffect(() => {
+		const audio = audioRef.current;
+		const archiveAudio = archiveAudioRef.current;
 		return () => {
 			if (snippetTimeoutRef.current) {
 				window.clearTimeout(snippetTimeoutRef.current);
 			}
-			audioRef.current?.pause();
-			archiveAudioRef.current?.pause();
+			audio?.pause();
+			archiveAudio?.pause();
 		};
 	}, []);
 
@@ -736,7 +728,7 @@ export function SongGame() {
 								} else if (status === "success") {
 									pillSubtext = trackInfo.name;
 								} else if (status === "failure") {
-									pillSubtext = trackInfo ? `${trackInfo.name} — ${trackInfo.artists}` : "Answer revealed";
+									pillSubtext = trackInfo ? `${trackInfo.name} · ${trackInfo.artists}` : "Answer revealed";
 								}
 								return (
 									<button
@@ -885,7 +877,7 @@ export function SongGame() {
 						{Array.from({ length: snippetDurations.length }).map((_, index) => {
 							const entry = guessHistory[index];
 							let tileState = "";
-							let label = "—";
+							let label = "·";
 							if (entry) {
 								if (entry.correct) {
 									tileState = "correct";
@@ -919,7 +911,7 @@ export function SongGame() {
 						<p className="lab-hint">{CATEGORY_LABELS[completionModal.category].title}</p>
 						{completionModal.status === "failure" ? (
 							<p>
-								Answer: {dailyCategories[completionModal.category]?.name} —{" "}
+								Answer: {dailyCategories[completionModal.category]?.name} ·{" "}
 								{dailyCategories[completionModal.category]?.artists}
 							</p>
 						) : null}
@@ -1084,145 +1076,4 @@ export function SongGame() {
 			<audio ref={archiveAudioRef} preload="none" />
 		</PageShell>
 	);
-}
-
-function normalizeTrackText(value: string) {
-	return value
-		.toLowerCase()
-		.replace(/\([^)]*\)/g, "")
-		.replace(/feat\..*/gi, "")
-		.replace(/-/g, " ")
-		.trim();
-}
-
-function isMatchingTrack(a: TrackResult, b: TrackResult) {
-	return (
-		normalizeTrackText(a.name) === normalizeTrackText(b.name) &&
-		artistsMatchExactly(a.artists, b.artists)
-	);
-}
-
-function hasMatchingArtist(a: TrackResult, b: TrackResult) {
-	return artistsOverlap(a.artists, b.artists);
-}
-
-function normalizeArtistList(value: string) {
-	const cleaned = value
-		.toLowerCase()
-		.replace(/\([^)]*\)/g, "")
-		.replace(/feat\..*/gi, "")
-		.replace(/with .*/gi, "")
-		.replace(/[-+]/g, " ")
-		.replace(/\band\b/g, ",")
-		.replace(/&/g, ",");
-	return cleaned
-		.split(",")
-		.map((entry) => entry.trim())
-		.filter(Boolean);
-}
-
-function artistsMatchExactly(a: string, b: string) {
-	const listA = normalizeArtistList(a);
-	const listB = normalizeArtistList(b);
-	if (listA.length !== listB.length) return false;
-	const setB = new Set(listB);
-	return listA.every((artist) => setB.has(artist));
-}
-
-function artistsOverlap(a: string, b: string) {
-	const listA = normalizeArtistList(a);
-	const setA = new Set(listA);
-	return normalizeArtistList(b).some((artist) => setA.has(artist));
-}
-
-function getEasternDateKey() {
-	const now = new Date();
-	const formatter = new Intl.DateTimeFormat("en-US", {
-		timeZone: "America/New_York",
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-	});
-	const parts = formatter.format(now).split("/");
-	const [month, day, year] = parts;
-	return `${year}-${month}-${day}`;
-}
-
-function formatSecondsLabel(value: number) {
-	return Number.isInteger(value) ? value.toString() : value.toFixed(1).replace(/\.0$/, "");
-}
-
-function getMillisecondsUntilNextEasternReset() {
-	const now = new Date();
-	const easternNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
-	const easternMidnight = new Date(easternNow);
-	easternMidnight.setHours(24, 0, 0, 0);
-	return Math.max(0, easternMidnight.getTime() - easternNow.getTime());
-}
-
-function formatCountdownLabel(ms: number) {
-	const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-	const hours = Math.floor(totalSeconds / 3600)
-		.toString()
-		.padStart(2, "0");
-	const minutes = Math.floor((totalSeconds % 3600) / 60)
-		.toString()
-		.padStart(2, "0");
-	const seconds = (totalSeconds % 60).toString().padStart(2, "0");
-	return `${hours}:${minutes}:${seconds}`;
-}
-
-function formatArchiveDateLabel(dateKey: string) {
-	const date = new Date(`${dateKey}T12:00:00Z`);
-	return new Intl.DateTimeFormat("en-US", {
-		month: "short",
-		day: "numeric",
-	}).format(date);
-}
-
-function formatArchiveLongDate(dateKey: string) {
-	const date = new Date(`${dateKey}T12:00:00Z`);
-	return new Intl.DateTimeFormat("en-US", {
-		weekday: "short",
-		month: "long",
-		day: "numeric",
-		year: "numeric",
-	}).format(date);
-}
-
-function groupDatesByMonth(dateKeys: string[]) {
-	const groups = new Map<string, string[]>();
-	for (const dateKey of dateKeys) {
-		const monthKey = dateKey.slice(0, 7);
-		const current = groups.get(monthKey) ?? [];
-		current.push(dateKey);
-		groups.set(monthKey, current);
-	}
-	return [...groups.entries()].map(([monthKey, dates]) => ({
-		key: monthKey,
-		label: formatArchiveMonthLabel(monthKey),
-		dates,
-	}));
-}
-
-function formatArchiveMonthLabel(monthKey: string) {
-	const date = new Date(`${monthKey}-01T12:00:00Z`);
-	return new Intl.DateTimeFormat("en-US", {
-		month: "long",
-		year: "numeric",
-	}).format(date);
-}
-
-function getActiveCategoryKeysForDate(currentDateKey: string): CategoryKey[] {
-	return isHolidaySeason(currentDateKey) ? [...DEFAULT_CATEGORY_ORDER, HOLIDAY_CATEGORY] : DEFAULT_CATEGORY_ORDER;
-}
-
-function isHolidaySeason(currentDateKey: string) {
-	const [, monthStr, dayStr] = currentDateKey.split("-");
-	const month = Number(monthStr);
-	const day = Number(dayStr);
-	if (Number.isNaN(month) || Number.isNaN(day)) {
-		return false;
-	}
-	return month === 12 || (month === 1 && day === 1);
 }
