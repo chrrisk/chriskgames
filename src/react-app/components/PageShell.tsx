@@ -30,6 +30,7 @@ export function PageShell({ page = "play", headerExtra, mainClassName, children 
 					<a href="/" onClick={playClick}>home</a>
 					<a href="/songgame" onClick={playClick}>songgame</a>
 					<a href="/colorgame" onClick={playClick}>colorgame</a>
+					<a href="/nextwordgame" onClick={playClick}>nextwordgame</a>
 				</nav>
 				<p>© ChrisK Studios 2026</p>
 			</footer>

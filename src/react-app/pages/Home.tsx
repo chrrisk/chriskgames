@@ -17,6 +17,13 @@ const games = [
 		tagline: "Five colors a day, same for everyone. Stare for four seconds, then rebuild each from memory.",
 		path: "/colorgame",
 	},
+	{
+		title: "nextwordgame",
+		emoji: "🔗",
+		chip: "Daily",
+		tagline: "One word leads to the next. Work down the chain with only first letters to go on.",
+		path: "/nextwordgame",
+	},
 ];
 
 export function Home() {
