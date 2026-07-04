@@ -16,23 +16,11 @@
 }
 
 .hero-sub {
-	margin: 0 0 2rem;
+	margin: 0;
 	color: var(--text-2);
 	font-size: 1.05rem;
 	line-height: 1.65;
 	max-width: 34rem;
-}
-
-.hero-actions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.75rem;
-}
-
-.hero-actions .primary-btn,
-.hero-actions .ghost-btn {
-	padding: 0.75rem 1.5rem;
-	font-size: 0.95rem;
 }
 
 /* ─── Games section ─── */
@@ -111,6 +99,22 @@ a.game-card:hover {
 	margin: 0;
 	font-size: 1.35rem;
 	color: var(--text);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.game-new-badge {
+	font-family: var(--font-body);
+	font-size: 0.62rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--accent-ink);
+	background: var(--accent);
+	border-radius: 999px;
+	padding: 0.2rem 0.55rem;
+	transform: translateY(-1px);
 }
 
 .game-card p {
@@ -164,11 +168,5 @@ a.game-card:hover .game-cta-arrow {
 @media (max-width: 600px) {
 	.hero {
 		padding: 2.5rem 0 2rem;
-	}
-
-	.hero-actions .primary-btn,
-	.hero-actions .ghost-btn {
-		width: 100%;
-		text-align: center;
 	}
 }

@@ -7,7 +7,7 @@ const games = [
 		title: "songgame",
 		emoji: "🎵",
 		chip: "Daily",
-		tagline: "Guess the song from a half-second snippet. Every wrong guess buys you a little more audio.",
+		tagline: "Guess the song from a one-second snippet. Every wrong guess buys you a little more audio.",
 		path: "/songgame",
 	},
 	{
@@ -23,6 +23,7 @@ const games = [
 		chip: "Daily",
 		tagline: "One word leads to the next. Work down the chain with only first letters to go on.",
 		path: "/chaingame",
+		isNew: true,
 	},
 ];
 
@@ -41,19 +42,11 @@ export function Home() {
 					A hand-built collection of quick puzzles. New challenges drop every
 					night at midnight Eastern. No accounts, no ads, no fuss.
 				</p>
-				<div className="hero-actions">
-					<a className="primary-btn" href="/songgame" onClick={playClick}>
-						Play today's songgame
-					</a>
-					<a className="ghost-btn" href="/colorgame" onClick={playClick}>
-						Try colorgame
-					</a>
-				</div>
 			</section>
 			<section className="games-section" id="games">
 				<div className="section-head">
 					<h2>The games</h2>
-					<p>Two so far. More on the workbench.</p>
+					<p>Three so far. More on the workbench.</p>
 				</div>
 				<div className="games-grid">
 					{games.map((game) => (
@@ -64,7 +57,10 @@ export function Home() {
 								</span>
 								<span className="game-chip">{game.chip}</span>
 							</div>
-							<h3>{game.title}</h3>
+							<h3>
+								{game.title}
+								{game.isNew ? <span className="game-new-badge">New!</span> : null}
+							</h3>
 							<p>{game.tagline}</p>
 							<span className="game-cta">
 								Play now<span className="game-cta-arrow" aria-hidden="true"> →</span>
