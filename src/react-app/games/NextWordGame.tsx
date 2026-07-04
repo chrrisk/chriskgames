@@ -59,7 +59,7 @@ export function NextWordGame() {
 	const [{ hints, solvedCount }, setProgress] = useState(() =>
 		loadStoredState(getEasternDateKey(), getPuzzleForDate(getEasternDateKey()).length),
 	);
-	const [guess, setGuess] = useState("");
+	const [typed, setTyped] = useState("");
 	const [message, setMessage] = useState<string | null>(null);
 	const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 	const [resetCountdown, setResetCountdown] = useState(() =>
@@ -70,6 +70,10 @@ export function NextWordGame() {
 
 	const isComplete = solvedCount >= chain.length;
 	const currentWord = isComplete ? null : chain[solvedCount];
+	const revealedCount = currentWord ? 1 + hints[solvedCount] : 0;
+	const remainingSlots = currentWord ? currentWord.length - revealedCount : 0;
+
+	const focusTyping = () => inputRef.current?.focus();
 
 	// Persist today's progress.
 	useEffect(() => {
@@ -86,7 +90,7 @@ export function NextWordGame() {
 				const nextChain = getPuzzleForDate(newKey);
 				setDateKey(newKey);
 				setProgress({ hints: Array(nextChain.length).fill(0), solvedCount: 1 });
-				setGuess("");
+				setTyped("");
 				setMessage(null);
 				if (typeof window !== "undefined") {
 					window.localStorage.removeItem(STORAGE_KEY);
@@ -124,27 +128,34 @@ export function NextWordGame() {
 				solvedCount: givenAway ? prev.solvedCount + 1 : prev.solvedCount,
 			};
 		});
-		setGuess("");
+		setTyped("");
 		setMessage(givenAway ? `It was "${currentWord}".` : missMessage);
 	};
 
 	const revealLetter = () => {
 		playClick();
 		applyReveal(null);
+		focusTyping();
+	};
+
+	const handleTypedChange = (value: string) => {
+		const letters = value.toLowerCase().replace(/[^a-z]/g, "").slice(0, remainingSlots);
+		setTyped(letters);
+		if (message) setMessage(null);
 	};
 
 	const handleSubmit = () => {
-		if (!currentWord) return;
-		const normalized = normalizeGuess(guess);
-		if (!normalized) return;
+		if (!currentWord || typed.length < remainingSlots) return;
 		playClick();
-		if (normalized === currentWord.toLowerCase()) {
+		const fullGuess = currentWord.slice(0, revealedCount).toLowerCase() + normalizeGuess(typed);
+		if (fullGuess === currentWord.toLowerCase()) {
 			setProgress((prev) => ({ ...prev, solvedCount: prev.solvedCount + 1 }));
-			setGuess("");
+			setTyped("");
 			setMessage(null);
-			return;
+		} else {
+			applyReveal("Not it. Another letter revealed.");
 		}
-		applyReveal("Not it. Another letter revealed.");
+		focusTyping();
 	};
 
 	const scores = chain.map((word, index) => (index === 0 ? null : wordScore(word, hints[index])));
@@ -195,14 +206,24 @@ export function NextWordGame() {
 	const renderWordRow = (word: string, index: number) => {
 		const isSolved = index < solvedCount;
 		const isCurrent = index === solvedCount;
-		const revealedCount = index === 0 ? word.length : isSolved ? word.length : 1 + hints[index];
+		const shownCount = index === 0 ? word.length : isSolved ? word.length : 1 + hints[index];
 		return (
-			<div className={`nw-row${isCurrent ? " current" : ""}${isSolved && index > 0 ? " solved" : ""}`} key={`${word}-${index}`}>
+			<div
+				className={`nw-row${isCurrent ? " current" : ""}${isSolved && index > 0 ? " solved" : ""}`}
+				key={`${word}-${index}`}
+				onClick={isCurrent ? focusTyping : undefined}
+			>
 				{word.split("").map((letter, letterIndex) => {
-					const revealed = letterIndex < revealedCount;
+					const revealed = letterIndex < shownCount;
+					const typedLetter = isCurrent && !revealed ? typed[letterIndex - shownCount] : undefined;
+					const isCaret = isCurrent && letterIndex === shownCount + typed.length;
+					const classes = ["nw-tile"];
+					if (revealed) classes.push("revealed");
+					if (typedLetter) classes.push("typed");
+					if (isCaret) classes.push("caret");
 					return (
-						<span className={`nw-tile${revealed ? " revealed" : ""}`} key={letterIndex}>
-							{revealed ? letter : ""}
+						<span className={classes.join(" ")} key={letterIndex}>
+							{revealed ? letter : typedLetter ?? ""}
 						</span>
 					);
 				})}
@@ -256,26 +277,35 @@ export function NextWordGame() {
 					</div>
 				) : (
 					<div className="nw-controls">
+						<input
+							ref={inputRef}
+							className="nw-hidden-input"
+							type="text"
+							value={typed}
+							autoFocus
+							autoCapitalize="off"
+							autoComplete="off"
+							autoCorrect="off"
+							spellCheck={false}
+							aria-label="Type the missing letters of the next word"
+							onChange={(event) => handleTypedChange(event.target.value)}
+							onKeyDown={(event) => {
+								if (event.key === "Enter") {
+									event.preventDefault();
+									handleSubmit();
+								}
+							}}
+						/>
+						<p className="lab-hint nw-typing-hint">
+							Type into the boxes, Enter to guess. Tap the row if the keyboard hides.
+						</p>
 						<div className="nw-input-row">
-							<input
-								ref={inputRef}
-								type="text"
-								value={guess}
-								placeholder="Type the next word"
-								autoCapitalize="off"
-								autoComplete="off"
-								autoCorrect="off"
-								spellCheck={false}
-								aria-label="Your guess for the next word"
-								onChange={(event) => setGuess(event.target.value)}
-								onKeyDown={(event) => {
-									if (event.key === "Enter") {
-										event.preventDefault();
-										handleSubmit();
-									}
-								}}
-							/>
-							<button className="primary-btn" type="button" onClick={handleSubmit} disabled={!guess.trim()}>
+							<button
+								className="primary-btn"
+								type="button"
+								onClick={handleSubmit}
+								disabled={typed.length < remainingSlots}
+							>
 								Guess
 							</button>
 							<button className="ghost-btn" type="button" onClick={revealLetter}>

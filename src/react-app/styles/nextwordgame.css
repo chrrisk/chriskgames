@@ -100,27 +100,44 @@
 	flex-wrap: wrap;
 }
 
-.nw-input-row input {
-	flex: 1;
-	min-width: 200px;
-	padding: 0.65rem 0.9rem;
-	border-radius: var(--radius-sm);
-	border: 1px solid var(--border-strong);
-	background: var(--surface);
+/* Real input stays offscreen; typing renders into the tiles. */
+.nw-hidden-input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	border: none;
+	padding: 0;
+}
+
+.nw-typing-hint {
+	margin: 0;
+}
+
+.nw-row.current {
+	cursor: text;
+}
+
+.nw-tile.typed {
+	background: var(--surface-3);
+	border-color: var(--border-strong);
 	color: var(--text);
-	font-family: inherit;
-	font-size: 0.95rem;
-	transition: border-color 0.15s ease, box-shadow 0.15s ease;
-	outline: none;
 }
 
-.nw-input-row input:focus {
+.nw-tile.caret {
 	border-color: var(--accent);
-	box-shadow: 0 0 0 3px var(--accent-dim);
+	box-shadow: 0 0 0 2px var(--accent-dim);
+	animation: nw-caret-pulse 1.2s ease-in-out infinite;
 }
 
-.nw-input-row input::placeholder {
-	color: var(--text-3);
+@keyframes nw-caret-pulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 2px var(--accent-dim);
+	}
+	50% {
+		box-shadow: 0 0 0 4px var(--accent-dim);
+	}
 }
 
 /* ─── Completion ─── */
