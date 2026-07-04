@@ -4,8 +4,8 @@ Small hand-built games by ChrisK Studios. New daily puzzles every night at midni
 
 ## The games
 
-- **songgame** — guess the song from a half-second snippet; every wrong guess unlocks a little more audio. Two categories daily (Oldies but Goodies, 2000s & Newer), plus a Holiday category in December.
-- **colorgame** — memorize a color for four seconds, then rebuild it from memory with hue/saturation/brightness sliders.
+- **songgame**: guess the song from a half-second snippet; every wrong guess unlocks a little more audio. Two categories daily (Oldies but Goodies, 2000s & Newer), plus a Holiday category in December.
+- **colorgame**: five daily colors, the same for everyone. Memorize each for four seconds, then rebuild it from memory with hue/saturation/brightness sliders.
 
 ## Stack
 

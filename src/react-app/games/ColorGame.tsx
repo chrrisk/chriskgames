@@ -1,77 +1,138 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageShell } from "../components/PageShell";
 import { useClickSound } from "../lib/sound";
+import {
+	formatCountdownLabel,
+	getEasternDateKey,
+	getMillisecondsUntilNextEasternReset,
+} from "../lib/time";
+import {
+	COLOR_GAME_ROUNDS,
+	DEFAULT_GUESS,
+	MEMORIZE_SECONDS,
+	generateDailyColors,
+	hslStr,
+	scoreColor,
+	scoreColorGuess,
+	scoreGradient,
+	type ColorHSL,
+} from "./colorgame-helpers";
 import "../styles/colorgame.css";
 
-const COLOR_GAME_ROUNDS = 5;
-const MEMORIZE_SECONDS = 4;
-
-type ColorHSL = { h: number; s: number; l: number };
 type ColorPhase = "memorize" | "guess" | "result" | "complete";
+
+type StoredState = {
+	dateKey?: string;
+	scores?: number[];
+};
+
+const STORAGE_KEY = "colorgame-daily-state";
+const MEMORIZE_MS = MEMORIZE_SECONDS * 1000;
+
+function loadStoredScores(dateKey: string): number[] {
+	if (typeof window === "undefined") return [];
+	try {
+		const raw = window.localStorage.getItem(STORAGE_KEY);
+		if (!raw) return [];
+		const data = JSON.parse(raw) as StoredState;
+		if (data.dateKey !== dateKey || !Array.isArray(data.scores)) return [];
+		return data.scores.filter((score) => typeof score === "number").slice(0, COLOR_GAME_ROUNDS);
+	} catch {
+		return [];
+	}
+}
 
 export function ColorGame() {
 	const playClick = useClickSound();
-	const [round, setRound] = useState(1);
-	const [phase, setPhase] = useState<ColorPhase>("memorize");
-	const [target, setTarget] = useState<ColorHSL>(() => randomColorHSL());
-	const [guess, setGuess] = useState<ColorHSL>({ h: 180, s: 50, l: 50 });
-	const [timeLeft, setTimeLeft] = useState(MEMORIZE_SECONDS);
-	const [roundScores, setRoundScores] = useState<number[]>([]);
-	const [lastScore, setLastScore] = useState(0);
-	const cgTimerRef = useRef<number | null>(null);
+	const [dateKey, setDateKey] = useState(() => getEasternDateKey());
+	const [scores, setScores] = useState<number[]>(() => loadStoredScores(getEasternDateKey()));
+	const [phase, setPhase] = useState<ColorPhase>(() =>
+		loadStoredScores(getEasternDateKey()).length >= COLOR_GAME_ROUNDS ? "complete" : "memorize",
+	);
+	const [guess, setGuess] = useState<ColorHSL>(DEFAULT_GUESS);
+	const [remainingMs, setRemainingMs] = useState(MEMORIZE_MS);
+	const [resetCountdown, setResetCountdown] = useState(() =>
+		formatCountdownLabel(getMillisecondsUntilNextEasternReset()),
+	);
 
+	const targets = useMemo(() => generateDailyColors(dateKey), [dateKey]);
+	const round = Math.min(scores.length + 1, COLOR_GAME_ROUNDS);
+	const target = targets[round - 1];
+	const lastScore = scores[scores.length - 1] ?? 0;
+
+	// Memorize countdown, driven by a wall-clock deadline so the bar and the
+	// label always agree with real time.
 	useEffect(() => {
 		if (phase !== "memorize") return;
-		cgTimerRef.current = window.setInterval(() => {
-			setTimeLeft((prev) => {
-				if (prev <= 1) {
-					if (cgTimerRef.current) window.clearInterval(cgTimerRef.current);
-					setPhase("guess");
-					return 0;
-				}
-				return prev - 1;
-			});
-		}, 1000);
-		return () => {
-			if (cgTimerRef.current) window.clearInterval(cgTimerRef.current);
-		};
+		const deadline = Date.now() + MEMORIZE_MS;
+		const intervalId = window.setInterval(() => {
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) {
+				window.clearInterval(intervalId);
+				setRemainingMs(0);
+				setPhase("guess");
+				return;
+			}
+			setRemainingMs(remaining);
+		}, 100);
+		return () => window.clearInterval(intervalId);
 	}, [phase, round]);
+
+	// Persist today's progress.
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		const payload: StoredState = { dateKey, scores };
+		window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+	}, [dateKey, scores]);
+
+	// Roll over to the next day's colors at midnight Eastern.
+	useEffect(() => {
+		const intervalId = window.setInterval(() => {
+			const newKey = getEasternDateKey();
+			if (newKey !== dateKey) {
+				setDateKey(newKey);
+				setScores([]);
+				setGuess(DEFAULT_GUESS);
+				setRemainingMs(MEMORIZE_MS);
+				setPhase("memorize");
+				if (typeof window !== "undefined") {
+					window.localStorage.removeItem(STORAGE_KEY);
+				}
+			}
+		}, 60000);
+		return () => window.clearInterval(intervalId);
+	}, [dateKey]);
+
+	useEffect(() => {
+		if (phase !== "complete") return;
+		const update = () => setResetCountdown(formatCountdownLabel(getMillisecondsUntilNextEasternReset()));
+		update();
+		const intervalId = window.setInterval(update, 1000);
+		return () => window.clearInterval(intervalId);
+	}, [phase]);
 
 	const handleSubmitGuess = () => {
 		playClick();
-		const score = scoreColorGuess(target, guess);
-		setLastScore(score);
-		setRoundScores((prev) => [...prev, score]);
+		setScores((prev) => [...prev, scoreColorGuess(target, guess)]);
 		setPhase("result");
 	};
 
 	const handleNextRound = () => {
 		playClick();
-		if (round >= COLOR_GAME_ROUNDS) {
+		if (scores.length >= COLOR_GAME_ROUNDS) {
 			setPhase("complete");
 		} else {
-			setRound((r) => r + 1);
-			setTarget(randomColorHSL());
-			setGuess({ h: 180, s: 50, l: 50 });
-			setTimeLeft(MEMORIZE_SECONDS);
+			setGuess(DEFAULT_GUESS);
+			setRemainingMs(MEMORIZE_MS);
 			setPhase("memorize");
 		}
 	};
 
-	const handleRestartGame = () => {
-		playClick();
-		setRound(1);
-		setRoundScores([]);
-		setLastScore(0);
-		setTarget(randomColorHSL());
-		setGuess({ h: 180, s: 50, l: 50 });
-		setTimeLeft(MEMORIZE_SECONDS);
-		setPhase("memorize");
-	};
-
-	const totalScore = roundScores.length
-		? Math.round(roundScores.reduce((a, b) => a + b, 0) / roundScores.length)
+	const totalScore = scores.length
+		? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
 		: 0;
+
+	const secondsLeft = Math.ceil(remainingMs / 1000);
 
 	return (
 		<PageShell
@@ -79,8 +140,17 @@ export function ColorGame() {
 			mainClassName="lab-doc"
 			headerExtra={
 				<div className="reset-countdown">
-					<span>Round</span>
-					<strong>{phase === "complete" ? "done" : `${round} / ${COLOR_GAME_ROUNDS}`}</strong>
+					{phase === "complete" ? (
+						<>
+							<span>New colors in</span>
+							<strong>{resetCountdown}</strong>
+						</>
+					) : (
+						<>
+							<span>Round</span>
+							<strong>{`${round} / ${COLOR_GAME_ROUNDS}`}</strong>
+						</>
+					)}
 				</div>
 			}
 		>
@@ -89,11 +159,11 @@ export function ColorGame() {
 					<>
 						<p className="eyebrow">Round {round} of {COLOR_GAME_ROUNDS}</p>
 						<h2 className="cg-title">Memorize this color</h2>
-						<p className="lab-hint">{timeLeft}s remaining</p>
+						<p className="lab-hint">{secondsLeft}s remaining</p>
 						<div className="cg-swatch-wrap">
 							<div className="cg-swatch" style={{ background: hslStr(target) }} />
 							<div className="cg-timer-bar">
-								<div className="cg-timer-fill" style={{ width: `${(timeLeft / MEMORIZE_SECONDS) * 100}%` }} />
+								<div className="cg-timer-fill" style={{ width: `${(remainingMs / MEMORIZE_MS) * 100}%` }} />
 							</div>
 						</div>
 					</>
@@ -168,11 +238,11 @@ export function ColorGame() {
 							</div>
 						</div>
 						<p className="lab-hint" style={{ margin: "0.75rem 0" }}>
-							Score: <strong style={{ color: cgScoreColor(lastScore), fontSize: "1.1rem" }}>{lastScore}%</strong>
+							Score: <strong style={{ color: scoreColor(lastScore), fontSize: "1.1rem" }}>{lastScore}%</strong>
 						</p>
 						<div className="lab-controls">
 							<button className="primary-btn" type="button" onClick={handleNextRound}>
-								{round >= COLOR_GAME_ROUNDS ? "See final score" : "Next round →"}
+								{scores.length >= COLOR_GAME_ROUNDS ? "See final score" : "Next round →"}
 							</button>
 						</div>
 					</>
@@ -180,25 +250,23 @@ export function ColorGame() {
 
 				{phase === "complete" && (
 					<>
-						<h2 className="cg-title">Final score</h2>
+						<h2 className="cg-title">Today's final score</h2>
 						<p className="lab-hint" style={{ marginBottom: "1rem" }}>
-							Average: <strong style={{ color: cgScoreColor(totalScore), fontSize: "1.5rem" }}>{totalScore}%</strong>
+							Average: <strong style={{ color: scoreColor(totalScore), fontSize: "1.5rem" }}>{totalScore}%</strong>
 						</p>
 						<ul className="cg-score-list">
-							{roundScores.map((score, i) => (
+							{scores.map((score, i) => (
 								<li key={i} className="cg-score-row">
 									<span>Round {i + 1}</span>
 									<div className="cg-score-bar-wrap">
-										<div className="cg-score-bar" style={{ width: `${score}%`, background: cgScoreGradient(score) }} />
+										<div className="cg-score-bar" style={{ width: `${score}%`, background: scoreGradient(score) }} />
 									</div>
-									<span style={{ color: cgScoreColor(score), fontWeight: 600 }}>{score}%</span>
+									<span style={{ color: scoreColor(score), fontWeight: 600 }}>{score}%</span>
 								</li>
 							))}
 						</ul>
+						<p className="lab-hint next-reset-hint">New colors in {resetCountdown}</p>
 						<div className="lab-controls" style={{ marginTop: "1.5rem" }}>
-							<button className="primary-btn" type="button" onClick={handleRestartGame}>
-								Play again
-							</button>
 							<a className="ghost-btn" href="/" onClick={playClick} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
 								Back to games
 							</a>
@@ -208,39 +276,4 @@ export function ColorGame() {
 			</section>
 		</PageShell>
 	);
-}
-
-function randomColorHSL(): ColorHSL {
-	return {
-		h: Math.floor(Math.random() * 360),
-		s: Math.floor(Math.random() * 85) + 10,
-		l: Math.floor(Math.random() * 70) + 10,
-	};
-}
-
-function hslStr({ h, s, l }: ColorHSL): string {
-	return `hsl(${h}, ${s}%, ${l}%)`;
-}
-
-function scoreColorGuess(target: ColorHSL, guess: ColorHSL): number {
-	const hueDiff = Math.min(Math.abs(target.h - guess.h), 360 - Math.abs(target.h - guess.h));
-	const hueScore = 1 - hueDiff / 180;
-	const satScore = 1 - Math.abs(target.s - guess.s) / 100;
-	const lightScore = 1 - Math.abs(target.l - guess.l) / 100;
-	const weighted = hueScore * 0.5 + satScore * 0.25 + lightScore * 0.25;
-	return Math.round(Math.pow(weighted, 2) * 100);
-}
-
-function cgScoreColor(score: number): string {
-	if (score >= 90) return "#85d8a6";
-	if (score >= 70) return "#e7c26a";
-	if (score >= 50) return "#e07b44";
-	return "#ef7b6d";
-}
-
-function cgScoreGradient(score: number): string {
-	if (score >= 90) return "linear-gradient(90deg, #85d8a6, #b8e6c9)";
-	if (score >= 70) return "linear-gradient(90deg, #e7c26a, #85d8a6)";
-	if (score >= 50) return "linear-gradient(90deg, #e07b44, #e7c26a)";
-	return "linear-gradient(90deg, #ef7b6d, #e07b44)";
 }

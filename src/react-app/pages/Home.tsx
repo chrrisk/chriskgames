@@ -13,8 +13,8 @@ const games = [
 	{
 		title: "colorgame",
 		emoji: "🎨",
-		chip: "Endless",
-		tagline: "Stare at a color for four seconds, then rebuild it from memory. Harder than it sounds.",
+		chip: "Daily",
+		tagline: "Five colors a day, same for everyone. Stare for four seconds, then rebuild each from memory.",
 		path: "/colorgame",
 	},
 ];
@@ -32,7 +32,7 @@ export function Home() {
 				</h1>
 				<p className="hero-sub">
 					A hand-built collection of quick puzzles. New challenges drop every
-					night at midnight Eastern — no accounts, no ads, no fuss.
+					night at midnight Eastern. No accounts, no ads, no fuss.
 				</p>
 				<div className="hero-actions">
 					<a className="primary-btn" href="/songgame" onClick={playClick}>
