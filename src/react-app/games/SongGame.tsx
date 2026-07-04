@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { PageShell } from "../components/PageShell";
-import { useClickSound } from "../lib/sound";
+import {
+	createAudioGraph,
+	fadeInToGain,
+	gainFromSlider,
+	setGain,
+	useClickSound,
+	type AudioGraph,
+} from "../lib/sound";
 import {
 	formatCountdownLabel,
 	getEasternDateKey,
@@ -112,8 +119,23 @@ export function SongGame() {
 	const [isVolumeOpen, setIsVolumeOpen] = useState(false);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const archiveAudioRef = useRef<HTMLAudioElement | null>(null);
+	const audioGraphRef = useRef<AudioGraph | null>(null);
+	const archiveAudioGraphRef = useRef<AudioGraph | null>(null);
 	const snippetTimeoutRef = useRef<number | null>(null);
 	const shareFeedbackTimeoutRef = useRef<number | null>(null);
+
+	// Lazily built on the first (user-gesture) play so the AudioContext is
+	// allowed to start.
+	const ensureAudioGraph = (
+		element: HTMLAudioElement | null,
+		graphRef: React.MutableRefObject<AudioGraph | null>,
+	) => {
+		if (!graphRef.current && element) {
+			graphRef.current = createAudioGraph(element);
+		}
+		void graphRef.current?.context.resume().catch(() => undefined);
+		return graphRef.current;
+	};
 
 	const currentTrack = dailyCategories[activeCategory] ?? null;
 	const archiveTrack = archiveCategories[archiveActiveCategory] ?? null;
@@ -376,8 +398,16 @@ export function SongGame() {
 	}, [dateKey]);
 
 	useEffect(() => {
-		if (audioRef.current) {
-			audioRef.current.volume = volume;
+		const gain = gainFromSlider(volume);
+		if (audioGraphRef.current) {
+			setGain(audioGraphRef.current, gain);
+		} else if (audioRef.current) {
+			audioRef.current.volume = gain;
+		}
+		if (archiveAudioGraphRef.current) {
+			setGain(archiveAudioGraphRef.current, gain);
+		} else if (archiveAudioRef.current) {
+			archiveAudioRef.current.volume = gain;
 		}
 		if (typeof window !== "undefined") {
 			window.localStorage.setItem(VOLUME_STORAGE_KEY, volume.toString());
@@ -393,6 +423,12 @@ export function SongGame() {
 			}
 			audio?.pause();
 			archiveAudio?.pause();
+			// The graphs are created lazily on first play, so the latest ref value
+			// is the one that must be closed here.
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+			void audioGraphRef.current?.context.close().catch(() => undefined);
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+			void archiveAudioGraphRef.current?.context.close().catch(() => undefined);
 		};
 	}, []);
 
@@ -430,7 +466,13 @@ export function SongGame() {
 
 		audio.src = currentTrack.previewUrl;
 		audio.currentTime = 0;
-		audio.volume = volume;
+		const graph = ensureAudioGraph(audio, audioGraphRef);
+		if (graph) {
+			audio.volume = 1;
+			fadeInToGain(graph, gainFromSlider(volume));
+		} else {
+			audio.volume = gainFromSlider(volume);
+		}
 		setIsPlayingSnippet(true);
 
 		if (snippetTimeoutRef.current) {
@@ -479,7 +521,13 @@ export function SongGame() {
 		if (!audio) return;
 		audio.src = archiveTrack.previewUrl;
 		audio.currentTime = 0;
-		audio.volume = volume;
+		const graph = ensureAudioGraph(audio, archiveAudioGraphRef);
+		if (graph) {
+			audio.volume = 1;
+			fadeInToGain(graph, gainFromSlider(volume));
+		} else {
+			audio.volume = gainFromSlider(volume);
+		}
 		void audio.play().catch(() => undefined);
 	};
 
@@ -915,7 +963,7 @@ export function SongGame() {
 						})}
 					</div>
 				</div>
-				<audio ref={audioRef} onEnded={() => setIsPlayingSnippet(false)} preload="auto" />
+				<audio ref={audioRef} onEnded={() => setIsPlayingSnippet(false)} preload="auto" crossOrigin="anonymous" />
 			</section>
 			{completionModal ? (
 				<div className="modal-backdrop" role="dialog" aria-modal="true">
@@ -1086,7 +1134,7 @@ export function SongGame() {
 					</div>
 				</div>
 			) : null}
-			<audio ref={archiveAudioRef} preload="none" />
+			<audio ref={archiveAudioRef} preload="none" crossOrigin="anonymous" />
 		</PageShell>
 	);
 }
