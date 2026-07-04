@@ -8,14 +8,14 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const workerSrc = readFileSync(join(__dirname, "../src/worker/index.ts"), "utf8");
+const workerSrc = readFileSync(join(__dirname, "../src/worker/schedule.ts"), "utf8");
 
-// Extract the DAILY_TRACK_SCHEDULE block
+// Extract the WEEKLY_TRACK_SCHEDULE block
 const scheduleMatch = workerSrc.match(
-	/const DAILY_TRACK_SCHEDULE[^=]*=\s*\{([\s\S]*?)\};\s*\n/
+	/const WEEKLY_TRACK_SCHEDULE[^=]*=\s*\{([\s\S]*?)\};\s*\n/
 );
 if (!scheduleMatch) {
-	console.error("Could not find DAILY_TRACK_SCHEDULE in worker/index.ts");
+	console.error("Could not find WEEKLY_TRACK_SCHEDULE in worker/schedule.ts");
 	process.exit(1);
 }
 

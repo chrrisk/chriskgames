@@ -5,12 +5,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const START_DATE = "2026-04-01";
-const workerPath = join(dirname(fileURLToPath(import.meta.url)), "../src/worker/index.ts");
+const workerPath = join(dirname(fileURLToPath(import.meta.url)), "../src/worker/schedule.ts");
 const source = readFileSync(workerPath, "utf8");
 
-const scheduleMatch = source.match(/const DAILY_TRACK_SCHEDULE[^=]*=\s*\{([\s\S]*?)\};\s*\n/);
+const scheduleMatch = source.match(/const WEEKLY_TRACK_SCHEDULE[^=]*=\s*\{([\s\S]*?)\};\s*\n/);
 if (!scheduleMatch) {
-	console.error("Could not find DAILY_TRACK_SCHEDULE in worker/index.ts");
+	console.error("Could not find WEEKLY_TRACK_SCHEDULE in worker/schedule.ts");
 	process.exit(1);
 }
 
