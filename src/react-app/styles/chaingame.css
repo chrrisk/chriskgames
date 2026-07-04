@@ -1,5 +1,5 @@
-/* ─── Nextwordgame ─── */
-.nw-card {
+/* ─── Chaingame ─── */
+.chain-card {
 	max-width: 640px;
 	margin-left: auto;
 	margin-right: auto;
@@ -9,27 +9,27 @@
 	gap: 0.75rem;
 }
 
-.nw-title {
+.chain-title {
 	margin: 0.25rem 0 0;
 	font-size: 1.6rem;
 	color: var(--text);
 }
 
-.nw-chain {
+.chain-chain {
 	display: flex;
 	flex-direction: column;
 	gap: 0.55rem;
 	margin: 1.25rem 0 0.5rem;
 }
 
-.nw-row {
+.chain-row {
 	display: flex;
 	align-items: center;
 	gap: 0.3rem;
 	flex-wrap: wrap;
 }
 
-.nw-tile {
+.chain-tile {
 	width: 2.4rem;
 	height: 2.4rem;
 	display: inline-flex;
@@ -45,63 +45,63 @@
 	transition: all 0.2s ease;
 }
 
-.nw-tile.revealed {
+.chain-tile.revealed {
 	background: var(--surface-3);
 	border-color: var(--border-strong);
 	color: var(--text);
 }
 
-.nw-row.current .nw-tile {
+.chain-row.current .chain-tile {
 	border-color: rgba(224, 123, 68, 0.35);
 }
 
-.nw-row.current .nw-tile.revealed {
+.chain-row.current .chain-tile.revealed {
 	background: var(--accent-dim);
 	border-color: var(--accent);
 	color: var(--accent-bright);
 }
 
-.nw-row.solved .nw-tile.revealed {
+.chain-row.solved .chain-tile.revealed {
 	background: var(--success-dim);
 	border-color: rgba(133, 216, 166, 0.45);
 	color: var(--text);
 }
 
-.nw-word-score {
+.chain-word-score {
 	margin-left: 0.5rem;
 	font-size: 0.82rem;
 	font-weight: 600;
 	font-variant-numeric: tabular-nums;
 }
 
-.nw-score-great {
+.chain-score-great {
 	color: var(--success);
 }
 
-.nw-score-ok {
+.chain-score-ok {
 	color: var(--warn);
 }
 
-.nw-score-poor {
+.chain-score-poor {
 	color: var(--danger);
 }
 
 /* ─── Controls ─── */
-.nw-controls {
+.chain-controls {
 	display: flex;
 	flex-direction: column;
 	gap: 0.6rem;
 	margin-top: 0.5rem;
 }
 
-.nw-input-row {
+.chain-input-row {
 	display: flex;
 	gap: 0.6rem;
 	flex-wrap: wrap;
 }
 
 /* Real input stays offscreen; typing renders into the tiles. */
-.nw-hidden-input {
+.chain-hidden-input {
 	position: absolute;
 	width: 1px;
 	height: 1px;
@@ -110,27 +110,27 @@
 	padding: 0;
 }
 
-.nw-typing-hint {
+.chain-typing-hint {
 	margin: 0;
 }
 
-.nw-row.current {
+.chain-row.current {
 	cursor: text;
 }
 
-.nw-tile.typed {
+.chain-tile.typed {
 	background: var(--surface-3);
 	border-color: var(--border-strong);
 	color: var(--text);
 }
 
-.nw-tile.caret {
+.chain-tile.caret {
 	border-color: var(--accent);
 	box-shadow: 0 0 0 2px var(--accent-dim);
-	animation: nw-caret-pulse 1.2s ease-in-out infinite;
+	animation: chain-caret-pulse 1.2s ease-in-out infinite;
 }
 
-@keyframes nw-caret-pulse {
+@keyframes chain-caret-pulse {
 	0%,
 	100% {
 		box-shadow: 0 0 0 2px var(--accent-dim);
@@ -141,20 +141,20 @@
 }
 
 /* ─── Completion ─── */
-.nw-complete {
+.chain-complete {
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
 	margin-top: 0.5rem;
 }
 
-.nw-final-heading {
+.chain-final-heading {
 	margin: 0;
 	font-size: 1.3rem;
 	color: var(--text);
 }
 
-.nw-home-link {
+.chain-home-link {
 	text-decoration: none;
 	display: inline-flex;
 	align-items: center;
@@ -162,7 +162,7 @@
 }
 
 @media (max-width: 480px) {
-	.nw-tile {
+	.chain-tile {
 		width: 2rem;
 		height: 2rem;
 		font-size: 0.9rem;

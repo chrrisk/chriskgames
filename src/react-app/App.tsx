@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Home } from "./pages/Home";
 import { SongGame } from "./games/SongGame";
 import { ColorGame } from "./games/ColorGame";
-import { NextWordGame } from "./games/NextWordGame";
+import { ChainGame } from "./games/ChainGame";
 import "./styles/layout.css";
 
 const defaultFavicon =
@@ -17,7 +17,7 @@ function App() {
 		typeof window !== "undefined" ? window.location.pathname.replace(/\/$/, "") : "";
 	const isSongRoute = path === "/songgame";
 	const isColorRoute = path === "/colorgame";
-	const isNextWordRoute = path === "/nextwordgame";
+	const isChainRoute = path === "/chaingame" || path === "/nextwordgame";
 
 	useEffect(() => {
 		if (typeof document === "undefined") return;
@@ -46,7 +46,7 @@ function App() {
 
 	if (isSongRoute) return <SongGame />;
 	if (isColorRoute) return <ColorGame />;
-	if (isNextWordRoute) return <NextWordGame />;
+	if (isChainRoute) return <ChainGame />;
 	return <Home />;
 }
 

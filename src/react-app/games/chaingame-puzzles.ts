@@ -50,6 +50,6 @@ const FALLBACK_POOL = Object.values(PUZZLE_SCHEDULE);
 export function getPuzzleForDate(dateKey: string): string[] {
 	const scheduled = PUZZLE_SCHEDULE[dateKey];
 	if (scheduled) return scheduled;
-	const random = createSeededRandom(hashStringToSeed(`nextword:${dateKey}`));
+	const random = createSeededRandom(hashStringToSeed(`chaingame:${dateKey}`));
 	return FALLBACK_POOL[Math.floor(random() * FALLBACK_POOL.length)];
 }

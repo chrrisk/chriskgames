@@ -18,11 +18,11 @@ const games = [
 		path: "/colorgame",
 	},
 	{
-		title: "nextwordgame",
+		title: "chaingame",
 		emoji: "🔗",
 		chip: "Daily",
 		tagline: "One word leads to the next. Work down the chain with only first letters to go on.",
-		path: "/nextwordgame",
+		path: "/chaingame",
 	},
 ];
 

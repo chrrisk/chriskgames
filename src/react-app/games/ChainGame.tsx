@@ -6,8 +6,8 @@ import {
 	getEasternDateKey,
 	getMillisecondsUntilNextEasternReset,
 } from "../lib/time";
-import { getPuzzleForDate } from "./nextwordgame-puzzles";
-import "../styles/nextwordgame.css";
+import { getPuzzleForDate } from "./chaingame-puzzles";
+import "../styles/chaingame.css";
 
 type StoredState = {
 	dateKey?: string;
@@ -15,7 +15,7 @@ type StoredState = {
 	solvedCount?: number;
 };
 
-const STORAGE_KEY = "nextwordgame-daily-state";
+const STORAGE_KEY = "chaingame-daily-state";
 
 function loadStoredState(dateKey: string, chainLength: number): { hints: number[]; solvedCount: number } {
 	const fresh = { hints: Array(chainLength).fill(0) as number[], solvedCount: 1 };
@@ -52,7 +52,7 @@ function wordScore(word: string, hintCount: number) {
 	return Math.round(100 * Math.max(0, 1 - hintCount / maxHints));
 }
 
-export function NextWordGame() {
+export function ChainGame() {
 	const playClick = useClickSound();
 	const [dateKey, setDateKey] = useState(() => getEasternDateKey());
 	const chain = useMemo(() => getPuzzleForDate(dateKey), [dateKey]);
@@ -181,11 +181,11 @@ export function NextWordGame() {
 				return emoji;
 			})
 			.join("");
-		const text = `🔗 nextwordgame ${dateKey}\n${lines} ${finalScore}%\nPlay it yourself: https://play.chriskstudios.com/nextwordgame`;
+		const text = `🔗 chaingame ${dateKey}\n${lines} ${finalScore}%\nPlay it yourself: https://play.chriskstudios.com/chaingame`;
 		let feedback = "Copied! 📋";
 		try {
 			if (typeof navigator !== "undefined" && navigator.share) {
-				await navigator.share({ title: "My nextwordgame results", text });
+				await navigator.share({ title: "My chaingame results", text });
 				feedback = "Shared! 🎉";
 			} else if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
 				await navigator.clipboard.writeText(text);
@@ -209,7 +209,7 @@ export function NextWordGame() {
 		const shownCount = index === 0 ? word.length : isSolved ? word.length : 1 + hints[index];
 		return (
 			<div
-				className={`nw-row${isCurrent ? " current" : ""}${isSolved && index > 0 ? " solved" : ""}`}
+				className={`chain-row${isCurrent ? " current" : ""}${isSolved && index > 0 ? " solved" : ""}`}
 				key={`${word}-${index}`}
 				onClick={isCurrent ? focusTyping : undefined}
 			>
@@ -217,7 +217,7 @@ export function NextWordGame() {
 					const revealed = letterIndex < shownCount;
 					const typedLetter = isCurrent && !revealed ? typed[letterIndex - shownCount] : undefined;
 					const isCaret = isCurrent && letterIndex === shownCount + typed.length;
-					const classes = ["nw-tile"];
+					const classes = ["chain-tile"];
 					if (revealed) classes.push("revealed");
 					if (typedLetter) classes.push("typed");
 					if (isCaret) classes.push("caret");
@@ -228,7 +228,7 @@ export function NextWordGame() {
 					);
 				})}
 				{index > 0 && isSolved ? (
-					<span className={`nw-word-score ${scoreTone(wordScore(word, hints[index]))}`}>
+					<span className={`chain-word-score ${scoreTone(wordScore(word, hints[index]))}`}>
 						{wordScore(word, hints[index])}%
 					</span>
 				) : null}
@@ -238,7 +238,7 @@ export function NextWordGame() {
 
 	return (
 		<PageShell
-			page="nextwordgame"
+			page="chaingame"
 			mainClassName="lab-doc"
 			headerExtra={
 				<div className="reset-countdown">
@@ -247,17 +247,17 @@ export function NextWordGame() {
 				</div>
 			}
 		>
-			<section className="doc-card nw-card">
+			<section className="doc-card chain-card">
 				<p className="eyebrow">Word chain</p>
-				<h2 className="nw-title">One word leads to the next</h2>
+				<h2 className="chain-title">One word leads to the next</h2>
 				<p className="lab-hint">
 					Each word pairs with the one above it. Wrong guesses reveal another letter; a fully
 					revealed word scores zero.
 				</p>
-				<div className="nw-chain">{chain.map(renderWordRow)}</div>
+				<div className="chain-chain">{chain.map(renderWordRow)}</div>
 				{isComplete ? (
-					<div className="nw-complete">
-						<h3 className="nw-final-heading">
+					<div className="chain-complete">
+						<h3 className="chain-final-heading">
 							Chain complete: <span className={scoreTone(finalScore)}>{finalScore}%</span>
 						</h3>
 						<p className="lab-hint next-reset-hint">Next chain in {resetCountdown}</p>
@@ -266,7 +266,7 @@ export function NextWordGame() {
 								Share results 🔗
 							</button>
 							<a
-								className="ghost-btn nw-home-link"
+								className="ghost-btn chain-home-link"
 								href="/"
 								onClick={playClick}
 							>
@@ -276,10 +276,10 @@ export function NextWordGame() {
 						{shareFeedback ? <p className="share-feedback">{shareFeedback}</p> : null}
 					</div>
 				) : (
-					<div className="nw-controls">
+					<div className="chain-controls">
 						<input
 							ref={inputRef}
-							className="nw-hidden-input"
+							className="chain-hidden-input"
 							type="text"
 							value={typed}
 							autoFocus
@@ -296,10 +296,10 @@ export function NextWordGame() {
 								}
 							}}
 						/>
-						<p className="lab-hint nw-typing-hint">
+						<p className="lab-hint chain-typing-hint">
 							Type into the boxes, Enter to guess. Tap the row if the keyboard hides.
 						</p>
-						<div className="nw-input-row">
+						<div className="chain-input-row">
 							<button
 								className="primary-btn"
 								type="button"
@@ -321,7 +321,7 @@ export function NextWordGame() {
 }
 
 function scoreTone(score: number) {
-	if (score >= 90) return "nw-score-great";
-	if (score >= 50) return "nw-score-ok";
-	return "nw-score-poor";
+	if (score >= 90) return "chain-score-great";
+	if (score >= 50) return "chain-score-ok";
+	return "chain-score-poor";
 }
