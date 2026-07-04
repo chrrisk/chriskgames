@@ -23,7 +23,11 @@ type DeezerSearchResponse = {
 	data?: DeezerTrack[];
 };
 
-const app = new Hono();
+type Bindings = {
+	ASSETS: Fetcher;
+};
+
+const app = new Hono<{ Bindings: Bindings }>();
 
 app.get("/api/", (c) => c.json({ name: "Cloudflare" }));
 
@@ -66,6 +70,10 @@ app.get("/api/music/archive", (c) => {
 		dates: getArchiveDates(),
 	});
 });
+
+// Anything that isn't an API route or a static asset falls through to the
+// SPA index so deep links like /songgame resolve.
+app.notFound((c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default app;
 
