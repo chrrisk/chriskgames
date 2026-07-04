@@ -62,9 +62,19 @@ type StoredState = {
 	selectedTracks?: Partial<Record<CategoryKey, TrackResult | null>>;
 };
 
-const snippetDurations = [0.5, 1, 2, 5, 10, 15];
+const snippetDurations = [1, 2, 3, 5, 10, 15];
 const FULL_REVEAL_DURATION = 30;
 const STORAGE_KEY = "songgame-daily-state";
+const VOLUME_STORAGE_KEY = "songgame-volume";
+const DEFAULT_VOLUME = 0.4;
+
+function loadStoredVolume() {
+	if (typeof window === "undefined") return DEFAULT_VOLUME;
+	const raw = window.localStorage.getItem(VOLUME_STORAGE_KEY);
+	const parsed = raw === null ? NaN : Number(raw);
+	if (Number.isNaN(parsed)) return DEFAULT_VOLUME;
+	return Math.min(1, Math.max(0, parsed));
+}
 
 export function SongGame() {
 	const playClick = useClickSound();
@@ -82,7 +92,7 @@ export function SongGame() {
 	const [gameMessage, setGameMessage] = useState<string | null>(null);
 	const [revealSteps, setRevealSteps] = useState<Record<CategoryKey, number>>(createInitialRevealSteps);
 	const [isPlayingSnippet, setIsPlayingSnippet] = useState(false);
-	const [volume, setVolume] = useState(0.8);
+	const [volume, setVolume] = useState(loadStoredVolume);
 	const [guessHistories, setGuessHistories] = useState<Record<CategoryKey, GuessEntry[]>>(createInitialGuessHistories);
 	const [winners, setWinners] = useState<Record<CategoryKey, boolean>>(createInitialWinners);
 	const [failures, setFailures] = useState<Record<CategoryKey, boolean>>(createInitialFailures);
@@ -368,6 +378,9 @@ export function SongGame() {
 	useEffect(() => {
 		if (audioRef.current) {
 			audioRef.current.volume = volume;
+		}
+		if (typeof window !== "undefined") {
+			window.localStorage.setItem(VOLUME_STORAGE_KEY, volume.toString());
 		}
 	}, [volume]);
 
