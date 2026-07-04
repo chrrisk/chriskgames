@@ -56,8 +56,14 @@ export function ColorGame() {
 	);
 
 	const targets = useMemo(() => generateDailyColors(dateKey), [dateKey]);
-	const round = Math.min(scores.length + 1, COLOR_GAME_ROUNDS);
-	const target = targets[round - 1];
+	// During result the just-played round is scores.length - 1; otherwise the
+	// round being played is scores.length.
+	const roundIndex =
+		phase === "result"
+			? Math.max(0, scores.length - 1)
+			: Math.min(scores.length, COLOR_GAME_ROUNDS - 1);
+	const round = roundIndex + 1;
+	const target = targets[roundIndex];
 	const lastScore = scores[scores.length - 1] ?? 0;
 
 	// Memorize countdown, driven by a wall-clock deadline so the bar and the
