@@ -8,6 +8,7 @@ import {
 	useClickSound,
 	type AudioGraph,
 } from "../lib/sound";
+import { othersAverage, submitAndFetchDailyStats, type DailyStats } from "../lib/stats";
 import {
 	formatCountdownLabel,
 	getEasternDateKey,
@@ -70,6 +71,8 @@ type StoredState = {
 };
 
 const snippetDurations = [1, 2, 3, 5, 10, 15];
+/** Percentage awarded for solving at each snippet step; failures score 0. */
+const SCORE_BY_SNIPPET_INDEX = [100, 85, 70, 55, 40, 25];
 const FULL_REVEAL_DURATION = 30;
 const STORAGE_KEY = "songgame-daily-state";
 const VOLUME_STORAGE_KEY = "songgame-volume";
@@ -117,6 +120,7 @@ export function SongGame() {
 	const [solvedAtMap, setSolvedAtMap] = useState<Record<CategoryKey, number | null>>(createInitialSolvedAt);
 	const [resetCountdown, setResetCountdown] = useState(() => formatCountdownLabel(getMillisecondsUntilNextEasternReset()));
 	const [isVolumeOpen, setIsVolumeOpen] = useState(false);
+	const [dailyStats, setDailyStats] = useState<DailyStats | null>(null);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const archiveAudioRef = useRef<HTMLAudioElement | null>(null);
 	const audioGraphRef = useRef<AudioGraph | null>(null);
@@ -178,6 +182,21 @@ export function SongGame() {
 	const hasQuery = query.trim().length > 0;
 	const showResults = hasQuery && (isSearchFocused || isResultsHovered);
 	const archiveMonths = groupDatesByMonth(archiveDates);
+
+	const allDone =
+		isHydrated &&
+		availableCategories.length > 0 &&
+		availableCategories.every((key) => winners[key] || failures[key]);
+
+	const computeDayScore = () => {
+		const scores = availableCategories.map((key) => {
+			if (!winners[key]) return 0;
+			const solvedAt = solvedAtMap[key];
+			const index = solvedAt === null ? -1 : snippetDurations.indexOf(solvedAt);
+			return SCORE_BY_SNIPPET_INDEX[index === -1 ? snippetDurations.length - 1 : index];
+		});
+		return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+	};
 
 	const getCategorySummaries = () =>
 		availableCategories.map((key) => {
@@ -371,6 +390,21 @@ export function SongGame() {
 		const countdownId = window.setInterval(updateCountdown, 1000);
 		return () => window.clearInterval(countdownId);
 	}, []);
+
+	// Record today's result once every category is finished, then load the
+	// day's averages.
+	useEffect(() => {
+		if (!allDone) return;
+		let cancelled = false;
+		void submitAndFetchDailyStats("songgame", dateKey, computeDayScore()).then((stats) => {
+			if (!cancelled) setDailyStats(stats);
+		});
+		return () => {
+			cancelled = true;
+		};
+		// The day's score is stable once allDone is true.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [allDone, dateKey]);
 
 	useEffect(() => {
 		const fetchDaily = async () => {
@@ -1015,6 +1049,11 @@ export function SongGame() {
 								</li>
 							))}
 						</ul>
+						{allDone && othersAverage(dailyStats, computeDayScore()) !== null ? (
+							<p className="lab-hint">
+								Everyone else averaged {othersAverage(dailyStats, computeDayScore())}% today.
+							</p>
+						) : null}
 						<p className="lab-hint next-reset-hint">Next songs in {resetCountdown}</p>
 						<div className="modal-actions">
 							<button

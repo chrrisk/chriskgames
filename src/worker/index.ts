@@ -25,7 +25,15 @@ type DeezerSearchResponse = {
 
 type Bindings = {
 	ASSETS: Fetcher;
+	DB: D1Database;
 };
+
+const STATS_GAMES = ["songgame", "colorgame", "chaingame"] as const;
+type StatsGame = (typeof STATS_GAMES)[number];
+
+function isStatsGame(value: string): value is StatsGame {
+	return (STATS_GAMES as readonly string[]).includes(value);
+}
 
 const app = new Hono<{ Bindings: Bindings }>();
 
@@ -69,6 +77,53 @@ app.get("/api/music/archive", (c) => {
 	return c.json({
 		dates: getArchiveDates(),
 	});
+});
+
+app.post("/api/stats/result", async (c) => {
+	let body: { game?: unknown; score?: unknown };
+	try {
+		body = await c.req.json();
+	} catch {
+		return jsonError("Invalid JSON body", 400);
+	}
+	const game = typeof body.game === "string" ? body.game : "";
+	const score = typeof body.score === "number" ? body.score : NaN;
+	if (!isStatsGame(game)) {
+		return jsonError("Unknown game", 400);
+	}
+	if (!Number.isFinite(score) || score < 0 || score > 100) {
+		return jsonError("Score must be between 0 and 100", 400);
+	}
+	try {
+		await c.env.DB.prepare("INSERT INTO results (date, game, score) VALUES (?1, ?2, ?3)")
+			.bind(getEasternDateKey(), game, Math.round(score))
+			.run();
+		return c.json({ ok: true });
+	} catch (error) {
+		console.error("Stats insert error", error);
+		return jsonError("Unable to record result", 500);
+	}
+});
+
+app.get("/api/stats/daily", async (c) => {
+	const game = c.req.query("game") ?? "";
+	if (!isStatsGame(game)) {
+		return jsonError("Unknown game", 400);
+	}
+	try {
+		const row = await c.env.DB.prepare(
+			"SELECT COUNT(*) AS count, AVG(score) AS average FROM results WHERE date = ?1 AND game = ?2",
+		)
+			.bind(getEasternDateKey(), game)
+			.first<{ count: number; average: number | null }>();
+		return c.json({
+			count: row?.count ?? 0,
+			average: row?.average ?? null,
+		});
+	} catch (error) {
+		console.error("Stats read error", error);
+		return jsonError("Unable to load stats", 500);
+	}
 });
 
 // Anything that isn't an API route or a static asset falls through to the

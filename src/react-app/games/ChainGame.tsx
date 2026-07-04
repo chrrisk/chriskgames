@@ -6,6 +6,7 @@ import {
 	getEasternDateKey,
 	getMillisecondsUntilNextEasternReset,
 } from "../lib/time";
+import { othersAverage, submitAndFetchDailyStats, type DailyStats } from "../lib/stats";
 import { getPuzzleForDate } from "./chaingame-puzzles";
 import "../styles/chaingame.css";
 
@@ -62,6 +63,7 @@ export function ChainGame() {
 	const [typed, setTyped] = useState("");
 	const [message, setMessage] = useState<string | null>(null);
 	const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+	const [dailyStats, setDailyStats] = useState<DailyStats | null>(null);
 	const [resetCountdown, setResetCountdown] = useState(() =>
 		formatCountdownLabel(getMillisecondsUntilNextEasternReset()),
 	);
@@ -114,6 +116,20 @@ export function ChainGame() {
 			}
 		};
 	}, []);
+
+	// Record today's result once finished, then load the day's averages.
+	useEffect(() => {
+		if (!isComplete) return;
+		let cancelled = false;
+		void submitAndFetchDailyStats("chaingame", dateKey, finalScore).then((stats) => {
+			if (!cancelled) setDailyStats(stats);
+		});
+		return () => {
+			cancelled = true;
+		};
+		// finalScore is stable once isComplete is true.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isComplete, dateKey]);
 
 	/** Reveals one more letter of the current word; advances if it's now fully shown. */
 	const applyReveal = (missMessage: string | null) => {
@@ -260,6 +276,11 @@ export function ChainGame() {
 						<h3 className="chain-final-heading">
 							Chain complete: <span className={scoreTone(finalScore)}>{finalScore}%</span>
 						</h3>
+						{othersAverage(dailyStats, finalScore) !== null ? (
+							<p className="lab-hint">
+								Everyone else averaged {othersAverage(dailyStats, finalScore)}% today.
+							</p>
+						) : null}
 						<p className="lab-hint next-reset-hint">Next chain in {resetCountdown}</p>
 						<div className="lab-controls">
 							<button className="primary-btn" type="button" onClick={() => void handleShare()}>

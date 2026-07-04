@@ -12,5 +12,12 @@
 		"directory": "./dist/client",
 		"binding": "ASSETS",
 		"not_found_handling": "single-page-application"
-	}
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "chriskgames-stats",
+			"database_id": "e974fc4c-ec5c-4292-8122-7f312ba5432a"
+		}
+	]
 }

@@ -6,6 +6,7 @@ import {
 	getEasternDateKey,
 	getMillisecondsUntilNextEasternReset,
 } from "../lib/time";
+import { othersAverage, submitAndFetchDailyStats, type DailyStats } from "../lib/stats";
 import {
 	COLOR_GAME_ROUNDS,
 	DEFAULT_GUESS,
@@ -54,6 +55,7 @@ export function ColorGame() {
 	const [resetCountdown, setResetCountdown] = useState(() =>
 		formatCountdownLabel(getMillisecondsUntilNextEasternReset()),
 	);
+	const [dailyStats, setDailyStats] = useState<DailyStats | null>(null);
 
 	const targets = useMemo(() => generateDailyColors(dateKey), [dateKey]);
 	// During result the just-played round is scores.length - 1; otherwise the
@@ -116,6 +118,20 @@ export function ColorGame() {
 		const intervalId = window.setInterval(update, 1000);
 		return () => window.clearInterval(intervalId);
 	}, [phase]);
+
+	// Record today's result once finished, then load the day's averages.
+	useEffect(() => {
+		if (phase !== "complete") return;
+		let cancelled = false;
+		void submitAndFetchDailyStats("colorgame", dateKey, totalScore).then((stats) => {
+			if (!cancelled) setDailyStats(stats);
+		});
+		return () => {
+			cancelled = true;
+		};
+		// totalScore is stable once the game is complete.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [phase, dateKey]);
 
 	const handleSubmitGuess = () => {
 		playClick();
@@ -260,6 +276,11 @@ export function ColorGame() {
 						<p className="lab-hint" style={{ marginBottom: "1rem" }}>
 							Average: <strong style={{ color: scoreColor(totalScore), fontSize: "1.5rem" }}>{totalScore}%</strong>
 						</p>
+						{othersAverage(dailyStats, totalScore) !== null ? (
+							<p className="lab-hint" style={{ marginBottom: "1rem" }}>
+								Everyone else averaged {othersAverage(dailyStats, totalScore)}% today.
+							</p>
+						) : null}
 						<ul className="cg-score-list">
 							{scores.map((score, i) => (
 								<li key={i} className="cg-score-row">
