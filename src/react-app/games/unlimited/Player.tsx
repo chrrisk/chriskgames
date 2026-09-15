@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useClickSound } from "../../lib/sound";
-import { searchTracks } from "./api";
+import { fetchFreshTracks, searchTracks } from "./api";
 import {
 	FULL_REVEAL_SECONDS,
 	artistsOverlap,
@@ -43,15 +43,25 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 	const [resultsOpen, setResultsOpen] = useState(false);
 	const searchRef = useRef<HTMLInputElement | null>(null);
 	const nextRef = useRef<HTMLButtonElement | null>(null);
+	/** Seconds of this song's snippet already heard, measured from the snippet start. */
+	const [heard, setHeard] = useState(0);
+	/** Where (in snippet seconds) the current playback began. */
+	const [playFrom, setPlayFrom] = useState(0);
+	const songKeyRef = useRef("");
+	const retriedRef = useRef(false);
 
-	const { play, stop, preload, isPlaying, progress } = player;
+	const { play, stop, preload, isPlaying, elapsedSeconds } = player;
 
 	// New song: reset search, stop audio, warm up the preview.
 	useEffect(() => {
+		songKeyRef.current = `${session.index}:${song.track.id}`;
 		setQuery("");
 		setResults([]);
 		setSearchError(null);
 		stop();
+		setHeard(0);
+		setPlayFrom(0);
+		retriedRef.current = false;
 		preload(song.track.previewUrl ?? null);
 		if (song.status === "playing") {
 			searchRef.current?.focus({ preventScroll: true });
@@ -111,6 +121,31 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 		return () => window.removeEventListener("keydown", onKey);
 	});
 
+	// Stale preview links (Deezer signs them for ~15 minutes) fail with a media
+	// error; fetch a fresh copy once and retry.
+	useEffect(() => {
+		const audio = player.audioRef.current;
+		if (!audio) return;
+		const onError = () => {
+			if (retriedRef.current || song.track.provider !== "deezer") return;
+			retriedRef.current = true;
+			const key = songKeyRef.current;
+			void fetchFreshTracks([song.track.id]).then(([fresh]) => {
+				if (!fresh?.previewUrl || songKeyRef.current !== key) return;
+				onUpdateSong(session.index, (current) => ({ ...current, track: { ...current.track, previewUrl: fresh.previewUrl } }));
+				preload(fresh.previewUrl);
+			});
+		};
+		audio.addEventListener("error", onError);
+		return () => audio.removeEventListener("error", onError);
+	}, [player.audioRef, song.track.id, song.track.provider, session.index, onUpdateSong, preload]);
+
+	/** Marks how far into the snippet we've heard; ignored if the song changed meanwhile. */
+	const rememberHeard = (from: number, key: string) => (seconds: number) => {
+		if (songKeyRef.current !== key) return;
+		setHeard((current) => Math.max(current, Math.min(currentLength, from + seconds)));
+	};
+
 	const togglePlay = () => {
 		if (!song.track.previewUrl) return;
 		if (isPlaying) {
@@ -119,9 +154,13 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 		}
 		if (isDone) {
 			play(song.track.previewUrl, 0, FULL_REVEAL_SECONDS);
-		} else {
-			play(song.track.previewUrl, song.offset, currentLength);
+			return;
 		}
+		// Newly unlocked audio plays from where you left off. Replaying with
+		// nothing new unlocked starts the snippet over.
+		const from = heard > 0 && heard < currentLength - 0.01 ? heard : 0;
+		setPlayFrom(from);
+		play(song.track.previewUrl, song.offset + from, currentLength - from, rememberHeard(from, songKeyRef.current));
 	};
 
 	const playFullReveal = () => {
@@ -171,13 +210,14 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 		song.guesses.some((guess) => guess.track && isCorrectGuess(guess.track, track));
 
 	const showResults = query.trim().length > 0 && resultsOpen;
-	const segments = ladder.map((length, index) => ({
-		index,
-		length: index === 0 ? length : length - ladder[index - 1],
-		unlocked: index <= step,
-		current: index === step,
-	}));
-	const playheadWidth = isDone ? 0 : (progress * currentLength) / totalLength;
+	const heardPosition = isPlaying ? playFrom + elapsedSeconds : heard;
+	const segments = ladder.map((length, index) => {
+		const start = index === 0 ? 0 : ladder[index - 1];
+		const span = length - start;
+		const fill = isDone ? 0 : Math.max(0, Math.min(1, (heardPosition - start) / span));
+		return { index, length: span, unlocked: index <= step, current: index === step, fill };
+	});
+	const resumeHint = !isPlaying && heard > 0 && heard < currentLength - 0.01;
 	const nextStepGain = step < maxStep ? ladder[step + 1] - currentLength : 0;
 	const hintBlur = settings.artHint && !isDone ? Math.max(0, (maxStep - step) * 5 + 2) : 0;
 	const solvedScore = song.status === "solved" ? scoreForStep(song.solvedStep) : 0;
@@ -256,13 +296,26 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 										key={segment.index}
 										className={`ul-segment${segment.unlocked ? " unlocked" : ""}${segment.current ? " current" : ""}`}
 										style={{ flexGrow: segment.length, flexBasis: 0 }}
-									/>
+									>
+										<span className="ul-segment-fill" style={{ width: `${segment.fill * 100}%` }} />
+									</span>
 								))}
-								<span className="ul-playhead" style={{ width: `${playheadWidth * 100}%` }} />
 							</div>
 							<div className="ul-snippet-meta">
 								<span>
-									<strong>{formatSeconds(currentLength)}s</strong> of {formatSeconds(totalLength)}s unlocked
+									{isPlaying ? (
+										<>
+											<strong>{heardPosition.toFixed(2)}s</strong> / {formatSeconds(currentLength)}s
+										</>
+									) : resumeHint ? (
+										<>
+											<strong>{formatSeconds(currentLength)}s</strong> unlocked · play resumes at {heard.toFixed(1)}s
+										</>
+									) : (
+										<>
+											<strong>{formatSeconds(currentLength)}s</strong> of {formatSeconds(totalLength)}s unlocked
+										</>
+									)}
 								</span>
 								{song.offset > 0 ? <span className="ul-hint">starts at {formatSeconds(song.offset)}s</span> : null}
 							</div>
@@ -272,7 +325,7 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 									className={`ul-play-btn${isPlaying ? " playing" : ""}`}
 									onClick={togglePlay}
 									disabled={!song.track.previewUrl}
-									aria-label={isPlaying ? "Stop" : "Play snippet"}
+									aria-label={isPlaying ? "Stop" : resumeHint ? "Play the newly unlocked part" : "Play snippet"}
 								>
 									{isPlaying ? "■" : "▶"}
 								</button>
@@ -384,7 +437,6 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 				})}
 			</ol>
 
-			<audio ref={player.audioRef} preload="auto" crossOrigin="anonymous" />
 		</div>
 	);
 }

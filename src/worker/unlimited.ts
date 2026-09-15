@@ -70,11 +70,31 @@ unlimited.get("/round", async (c) => {
 		if (picks.length === 0) {
 			return jsonError("No playable songs found for that category right now", 502);
 		}
-		return c.json({ tracks: picks });
+		// Cached pools hold preview URLs that Deezer signs for only ~15 minutes,
+		// so the picks are re-fetched for fresh links right before they're played.
+		return c.json({ tracks: await refreshTracks(picks) });
 	} catch (error) {
 		console.error("Unlimited round error", error);
 		return jsonError(error instanceof Error ? error.message : "Unable to build a round", 502);
 	}
+});
+
+/** Fresh copies (new signed preview URLs) of Deezer tracks by id. */
+unlimited.get("/tracks", async (c) => {
+	const ids = splitList(c.req.query("ids"))
+		.filter((id) => /^\d{1,16}$/.test(id))
+		.slice(0, 20);
+	if (ids.length === 0) return jsonError("Missing ids", 400);
+	const tracks = await Promise.all(
+		ids.map(async (id) => {
+			try {
+				return await fetchDeezerTrack(id);
+			} catch {
+				return null;
+			}
+		}),
+	);
+	return c.json({ tracks });
 });
 
 unlimited.get("/artists", async (c) => {
@@ -333,6 +353,20 @@ async function buildPool(categoryId: string, count: number): Promise<MappedTrack
 		}),
 	);
 	return shuffle(pools.flat());
+}
+
+async function refreshTracks(tracks: MappedTrack[]) {
+	const refreshed = await Promise.all(
+		tracks.map(async (track) => {
+			try {
+				const fresh = await fetchDeezerTrack(track.id);
+				return fresh.previewUrl ? fresh : null;
+			} catch {
+				return null;
+			}
+		}),
+	);
+	return refreshed.filter((track): track is MappedTrack => track !== null);
 }
 
 function pickRound(pool: MappedTrack[], count: number, excludedArtists: Set<string>, seen: Set<string>) {

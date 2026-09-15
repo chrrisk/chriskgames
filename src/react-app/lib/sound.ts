@@ -86,11 +86,11 @@ export function setCompression(graph: AudioGraph, enabled: boolean) {
 }
 
 /** Fades from silence up to the target gain; call at the start of playback. */
-export function fadeInToGain(graph: AudioGraph, target: number) {
+export function fadeInToGain(graph: AudioGraph, target: number, seconds: number = FADE_IN_SECONDS) {
 	const now = graph.context.currentTime;
 	graph.gain.gain.cancelScheduledValues(now);
 	graph.gain.gain.setValueAtTime(0, now);
-	graph.gain.gain.linearRampToValueAtTime(target, now + FADE_IN_SECONDS);
+	graph.gain.gain.linearRampToValueAtTime(target, now + Math.max(0.005, seconds));
 }
 
 /** Immediately moves to the target gain; for live slider adjustments. */

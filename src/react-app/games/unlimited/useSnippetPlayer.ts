@@ -19,10 +19,13 @@ export function useSnippetPlayer(volume: number, compress: boolean) {
 	const graphRef = useRef<AudioGraph | null>(null);
 	const frameRef = useRef<number | null>(null);
 	const safetyTimeoutRef = useRef<number | null>(null);
-	const activeRef = useRef<{ offset: number; length: number } | null>(null);
+	const activeRef = useRef<{ offset: number; length: number; onDone?: (heard: number) => void } | null>(null);
 	const [isPlaying, setIsPlaying] = useState(false);
 	/** 0..1 through the current snippet. */
 	const [progress, setProgress] = useState(0);
+	/** Seconds of the current snippet heard so far, from the audio clock. */
+	const [elapsedSeconds, setElapsedSeconds] = useState(0);
+	const onPlayingRef = useRef<(() => void) | null>(null);
 	const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
 
 	const clearWatchers = () => {
@@ -36,12 +39,26 @@ export function useSnippetPlayer(volume: number, compress: boolean) {
 		}
 	};
 
+	const detachPlaying = () => {
+		if (onPlayingRef.current && audioRef.current) {
+			audioRef.current.removeEventListener("playing", onPlayingRef.current);
+		}
+		onPlayingRef.current = null;
+	};
+
 	const stop = useCallback(() => {
 		clearWatchers();
+		detachPlaying();
+		const active = activeRef.current;
 		activeRef.current = null;
+		if (active && audioRef.current) {
+			const heard = Math.max(0, Math.min(active.length, audioRef.current.currentTime - active.offset));
+			active.onDone?.(heard);
+		}
 		audioRef.current?.pause();
 		setIsPlaying(false);
 		setProgress(0);
+		setElapsedSeconds(0);
 	}, []);
 
 	const ensureGraph = useCallback(() => {
@@ -66,10 +83,12 @@ export function useSnippetPlayer(volume: number, compress: boolean) {
 	}, []);
 
 	const play = useCallback(
-		(url: string, offset: number, length: number) => {
+		(url: string, offset: number, length: number, onDone?: (heard: number) => void) => {
 			const audio = audioRef.current;
 			if (!audio) return false;
 			clearWatchers();
+			detachPlaying();
+			activeRef.current = null;
 
 			if (audio.src !== url) {
 				audio.src = url;
@@ -77,14 +96,19 @@ export function useSnippetPlayer(volume: number, compress: boolean) {
 				setLoadedUrl(url);
 			}
 
+			detachPlaying();
 			const graph = ensureGraph();
 			if (graph) {
 				audio.volume = 1;
 				setCompression(graph, compress);
-				fadeInToGain(graph, gainFromSlider(volume));
+				// Silence until playback actually starts, then fade in fast.
+				setGain(graph, 0);
 			} else {
 				audio.volume = gainFromSlider(volume);
 			}
+			// Short snippets get a near-instant fade (just enough to avoid a click)
+			// so a 0.5s clip is actually 0.5s of audible music.
+			const fadeSeconds = Math.min(0.2, length * 0.08);
 
 			const begin = () => {
 				try {
@@ -93,39 +117,57 @@ export function useSnippetPlayer(volume: number, compress: boolean) {
 					// Seeking before metadata is available throws in some browsers;
 					// the loadedmetadata path below retries.
 				}
-				activeRef.current = { offset, length };
+				activeRef.current = { offset, length, onDone };
 				setIsPlaying(true);
 				setProgress(0);
-				void audio.play().catch(() => {
+				setElapsedSeconds(0);
+
+				const finish = () => {
+					audio.pause();
+					const active = activeRef.current;
 					activeRef.current = null;
+					if (active) active.onDone?.(active.length);
 					setIsPlaying(false);
-				});
+					setProgress(0);
+					setElapsedSeconds(0);
+					clearWatchers();
+					detachPlaying();
+				};
 
 				const tick = () => {
 					const active = activeRef.current;
 					if (!active) return;
 					const elapsed = audio.currentTime - active.offset;
 					if (elapsed >= active.length || audio.ended) {
-						audio.pause();
-						activeRef.current = null;
-						setIsPlaying(false);
-						setProgress(0);
-						clearWatchers();
+						finish();
 						return;
 					}
-					setProgress(Math.max(0, Math.min(1, elapsed / active.length)));
+					const clamped = Math.max(0, Math.min(active.length, elapsed));
+					setElapsedSeconds(clamped);
+					setProgress(clamped / active.length);
 					frameRef.current = requestAnimationFrame(tick);
 				};
-				frameRef.current = requestAnimationFrame(tick);
-				// Belt and braces: if the tab is hidden, animation frames stop.
-				safetyTimeoutRef.current = window.setTimeout(() => {
-					if (activeRef.current) {
-						audio.pause();
-						activeRef.current = null;
-						setIsPlaying(false);
-						setProgress(0);
-					}
-				}, (length + 0.35) * 1000);
+
+				// Everything time-based is armed from the moment audio actually
+				// starts, so buffering delays never eat into the snippet.
+				const onPlaying = () => {
+					detachPlaying();
+					if (!activeRef.current) return;
+					if (graph) fadeInToGain(graph, gainFromSlider(volume), fadeSeconds);
+					frameRef.current = requestAnimationFrame(tick);
+					// Backstop for hidden tabs where animation frames stop.
+					safetyTimeoutRef.current = window.setTimeout(() => {
+						if (activeRef.current) finish();
+					}, (length + 0.5) * 1000);
+				};
+				onPlayingRef.current = onPlaying;
+				audio.addEventListener("playing", onPlaying);
+
+				void audio.play().catch(() => {
+					detachPlaying();
+					activeRef.current = null;
+					setIsPlaying(false);
+				});
 			};
 
 			if (audio.readyState >= 1) {
@@ -165,5 +207,5 @@ export function useSnippetPlayer(volume: number, compress: boolean) {
 		};
 	}, []);
 
-	return { audioRef, isPlaying, progress, loadedUrl, play, stop, preload };
+	return { audioRef, isPlaying, progress, elapsedSeconds, loadedUrl, play, stop, preload };
 }
