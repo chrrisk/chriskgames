@@ -47,6 +47,10 @@ type QuizPayload = {
 };
 
 const ROUND_SIZE_MAX = 10;
+/** Tracks below this Deezer rank are only used when a pool has nothing better. */
+const POPULAR_RANK_FLOOR = 150_000;
+/** Fraction of a pool, sorted by popularity, that rounds draw from. */
+const POPULAR_SLICE = 0.6;
 const IMPORT_TRACK_CAP = 500;
 const QUIZ_TRACK_CAP = 10;
 const PLAYLIST_CACHE_SECONDS = 6 * 60 * 60;
@@ -308,19 +312,19 @@ async function readQuizStats(db: D1Database, quizId: string): Promise<QuizStats>
 
 async function buildPool(categoryId: string, count: number): Promise<MappedTrack[]> {
 	if (categoryId === MIX_CATEGORY_ID) {
-		// One song from each of `count` different categories.
+		// One song from each of `count` different categories: each category's
+		// pool is trimmed to its popular slice, then they're interleaved.
 		const shuffled = shuffle([...UNLIMITED_CATEGORIES]).slice(0, count);
 		const pools = await Promise.all(
 			shuffled.map(async (category) => {
 				const source = pickRandom(category.sources);
 				try {
-					return shuffle(await fetchSourceTracks(source));
+					return popularSlice(await fetchSourceTracks(source), count);
 				} catch {
 					return [] as MappedTrack[];
 				}
 			}),
 		);
-		// Interleave so the picker takes one from each category first.
 		const interleaved: MappedTrack[] = [];
 		const maxLength = Math.max(0, ...pools.map((pool) => pool.length));
 		for (let index = 0; index < maxLength; index++) {
@@ -328,7 +332,8 @@ async function buildPool(categoryId: string, count: number): Promise<MappedTrack
 				if (pool[index]) interleaved.push(pool[index]);
 			}
 		}
-		return interleaved;
+		// Ranks are equalised so pickRound's popularity sort keeps the interleave.
+		return interleaved.map((track) => ({ ...track, rank: 1_000_000 }));
 	}
 
 	if (categoryId.startsWith("artist:")) {
@@ -355,6 +360,17 @@ async function buildPool(categoryId: string, count: number): Promise<MappedTrack
 	return shuffle(pools.flat());
 }
 
+/** Shuffled popular slice of a pool (same rule pickRound applies). */
+function popularSlice(pool: MappedTrack[], count: number) {
+	const playable = pool.filter((track) => track.previewUrl && track.name && !isUnfairAnswer(track.name, track.artists));
+	const byPopularity = [...playable].sort((a, b) => b.rank - a.rank);
+	const sliceSize = Math.max(count * 4, Math.ceil(byPopularity.length * POPULAR_SLICE));
+	let eligible = byPopularity.slice(0, sliceSize);
+	const aboveFloor = eligible.filter((track) => track.rank >= POPULAR_RANK_FLOOR);
+	if (aboveFloor.length >= count * 3) eligible = aboveFloor;
+	return shuffle(eligible);
+}
+
 async function refreshTracks(tracks: MappedTrack[]) {
 	const refreshed = await Promise.all(
 		tracks.map(async (track) => {
@@ -370,13 +386,21 @@ async function refreshTracks(tracks: MappedTrack[]) {
 }
 
 function pickRound(pool: MappedTrack[], count: number, excludedArtists: Set<string>, seen: Set<string>) {
-	const eligible = pool.filter(
+	const playable = pool.filter(
 		(track) =>
 			track.previewUrl &&
 			track.name &&
-			!isUnfairAnswer(track.name) &&
+			!isUnfairAnswer(track.name, track.artists) &&
 			!excludedArtists.has(normalizeArtist(track.artists)),
 	);
+	// Keep the well-known songs: the most popular slice of the pool, with a
+	// hard floor unless that would leave too little to build a round from.
+	const byPopularity = [...playable].sort((a, b) => b.rank - a.rank);
+	const sliceSize = Math.max(count * 4, Math.ceil(byPopularity.length * POPULAR_SLICE));
+	let eligible = byPopularity.slice(0, sliceSize);
+	const aboveFloor = eligible.filter((track) => track.rank >= POPULAR_RANK_FLOOR);
+	if (aboveFloor.length >= count * 3) eligible = aboveFloor;
+	eligible = shuffle(eligible);
 	const fresh = eligible.filter((track) => !seen.has(track.id));
 	const candidates = fresh.length >= count ? fresh : eligible;
 
@@ -686,15 +710,16 @@ async function resolveOnDeezer(name: string, artists: string): Promise<MappedTra
 		const results = await searchDeezerTracks(query, 8);
 		const wantedName = normalizeTitle(name);
 		const wantedArtists = splitArtists(artists).map(normalizeArtist);
+		const fair = results.filter((track) => track.previewUrl && !isUnfairAnswer(track.name, track.artists));
+		// The artist has to match. A same-named song by someone else (a string
+		// quartet "tribute", a jazz standard) is worse than skipping the track.
 		const match =
-			results.find(
+			fair.find((track) => normalizeTitle(track.name) === wantedName && artistsOverlap(wantedArtists, track.artists)) ??
+			fair.find(
 				(track) =>
-					track.previewUrl &&
-					normalizeTitle(track.name) === wantedName &&
-					artistsOverlap(wantedArtists, track.artists),
-			) ??
-			results.find((track) => track.previewUrl && normalizeTitle(track.name) === wantedName) ??
-			results.find((track) => track.previewUrl && artistsOverlap(wantedArtists, track.artists));
+					artistsOverlap(wantedArtists, track.artists) &&
+					(normalizeTitle(track.name).startsWith(wantedName) || wantedName.startsWith(normalizeTitle(track.name))),
+			);
 		if (match) return match;
 	}
 	return null;
