@@ -5,6 +5,7 @@ import { useClickSound } from "../../lib/sound";
 import {
 	fetchQuiz,
 	fetchRound,
+	refreshDeezerTracks,
 	resolveTracks,
 	submitQuizResult,
 	type ArtistResult,
@@ -213,7 +214,7 @@ export function SongGameUnlimited() {
 			);
 			beginSession(
 				{ kind: "playlist", id: playlist.key, title: playlist.name, emoji: "🎶", subtitle: `${providerLabel(playlist.provider)} playlist` },
-				chosen.map(({ track }) => track),
+				await refreshDeezerTracks(chosen.map(({ track }) => track)),
 			);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Couldn't start that playlist");
@@ -223,8 +224,11 @@ export function SongGameUnlimited() {
 		}
 	};
 
-	const startQuiz = (state: QuizState) => {
+	const startQuiz = async (state: QuizState) => {
 		const { quiz } = state;
+		setBusy(true);
+		const tracks = await refreshDeezerTracks(quiz.tracks);
+		setBusy(false);
 		beginSession(
 			{
 				kind: "quiz",
@@ -233,7 +237,7 @@ export function SongGameUnlimited() {
 				emoji: "✉️",
 				subtitle: quiz.from ? `From ${quiz.from}` : "A quiz from a friend",
 			},
-			quiz.tracks,
+			tracks,
 			quiz.ladder,
 			quiz.randomStart,
 			state.preview ? undefined : quiz.id,
@@ -247,7 +251,7 @@ export function SongGameUnlimited() {
 			preview: true,
 		};
 		setQuizState(state);
-		startQuiz(state);
+		void startQuiz(state);
 	};
 
 	const updateSong = (index: number, updater: (song: SongState) => SongState) => {
@@ -330,7 +334,7 @@ export function SongGameUnlimited() {
 		if (!session) return;
 		player.stop();
 		if (session.source.kind === "quiz" && quizState) {
-			startQuiz({ ...quizState, preview: quizState.preview });
+			void startQuiz({ ...quizState, preview: quizState.preview });
 			return;
 		}
 		if (session.source.kind === "playlist") {
@@ -378,14 +382,18 @@ export function SongGameUnlimited() {
 				max="1"
 				step="0.01"
 				value={settings.volume}
-				onChange={(event) => setSettings((current) => ({ ...current, volume: Number(event.target.value) }))}
-				onInput={(event) => setSettings((current) => ({ ...current, volume: Number(event.currentTarget.value) }))}
+				onChange={(event) => {
+					const volume = Number(event.target.value);
+					setSettings((current) => ({ ...current, volume }));
+				}}
 			/>
 		</label>
 	);
 
 	return (
 		<PageShell page="songgame · unlimited" mainClassName="ul-doc" headerExtra={headerExtra}>
+			{/* One element for the whole page: the WebAudio graph binds to it once. */}
+			<audio ref={player.audioRef} preload="auto" crossOrigin="anonymous" />
 			{screen === "lobby" ? (
 				<Lobby
 					settings={settings}
@@ -422,8 +430,8 @@ export function SongGameUnlimited() {
 					) : null}
 					<Leaderboard entries={quizState.stats.leaderboard} highlight={playerName} />
 					<div className="ul-intro-actions">
-						<button type="button" className="primary-btn" onClick={() => { playClick(); startQuiz(quizState); }}>
-							Start quiz
+						<button type="button" className="primary-btn" disabled={busy} onClick={() => { playClick(); void startQuiz(quizState); }}>
+							{busy ? "Loading…" : "Start quiz"}
 						</button>
 						<button type="button" className="ghost-btn" onClick={() => { playClick(); backToLobby(); }}>
 							Not now

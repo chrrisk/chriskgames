@@ -30,6 +30,34 @@ export async function searchTracks(query: string, signal?: AbortSignal) {
 	return data.tracks ?? [];
 }
 
+/** Re-fetches Deezer tracks so their short-lived preview URLs are valid. */
+export async function fetchFreshTracks(ids: string[]) {
+	if (ids.length === 0) return [] as (TrackResult | null)[];
+	const data = await readJson<{ tracks: (TrackResult | null)[] }>(
+		await fetch(`/api/unlimited/tracks?ids=${encodeURIComponent(ids.join(","))}`),
+	);
+	return data.tracks;
+}
+
+/**
+ * Swaps stale Deezer previews for fresh ones; tracks from other providers and
+ * tracks Deezer no longer serves are returned untouched.
+ */
+export async function refreshDeezerTracks(tracks: TrackResult[]) {
+	const ids = tracks.filter((track) => track.provider === "deezer" && /^\d+$/.test(track.id)).map((track) => track.id);
+	if (ids.length === 0) return tracks;
+	try {
+		const fresh = await fetchFreshTracks(ids);
+		const byId = new Map<string, TrackResult>();
+		fresh.forEach((track, index) => {
+			if (track?.previewUrl) byId.set(ids[index], track);
+		});
+		return tracks.map((track) => byId.get(track.id) ?? track);
+	} catch {
+		return tracks;
+	}
+}
+
 export type ArtistResult = { id: string; name: string; picture: string | null; fans: number };
 
 export async function searchArtists(query: string, signal?: AbortSignal) {
