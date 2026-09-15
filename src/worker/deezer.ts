@@ -9,6 +9,7 @@ export type DeezerTrack = {
 	preview?: string | null;
 	duration?: number | null;
 	link?: string | null;
+	rank?: number | null;
 };
 
 export type DeezerListResponse = {
@@ -28,6 +29,8 @@ export type MappedTrack = {
 	duration: number | null;
 	provider: "deezer";
 	url: string | null;
+	/** Deezer popularity score (roughly 0–1,000,000). */
+	rank: number;
 };
 
 export function mapDeezerTrack(item: DeezerTrack): MappedTrack {
@@ -41,6 +44,7 @@ export function mapDeezerTrack(item: DeezerTrack): MappedTrack {
 		duration: item.duration ?? null,
 		provider: "deezer",
 		url: item.link ?? null,
+		rank: item.rank ?? 0,
 	};
 }
 
@@ -101,8 +105,15 @@ export function isAlternateVersion(title: string) {
  * Lighter filter for answer pools: only throws out recordings that would be
  * unfair to guess from (karaoke, instrumentals, live takes, tribute covers).
  */
-export function isUnfairAnswer(title: string) {
-	return /karaoke|instrumental|\blive\b|tribute|made famous|originally performed|in the style of|sped up|slowed/i.test(
-		title,
+export function isUnfairAnswer(title: string, artist = "") {
+	if (
+		/karaoke|instrumental|\blive\b|en vivo|ao vivo|tribute|made famous|originally performed|in the style of|sped up|slowed|8[- ]bit|lullaby|music box/i.test(
+			title,
+		)
+	) {
+		return true;
+	}
+	return /quartet|orchestra|tribute|karaoke|kidz bop|lullaby|rockabye|piano (guys|dreamers|tribute)|vitamin string|midnite|ameritz|the hit crew|party tyme|8[- ]bit|sleeping baby|music box|instrumental|cover (band|guys|nation)|glee cast|lofi|lo-fi/i.test(
+		artist,
 	);
 }

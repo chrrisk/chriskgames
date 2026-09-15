@@ -217,7 +217,7 @@ export const UNLIMITED_CATEGORIES: UnlimitedCategory[] = [
 		blurb: "Songs you know from the big screen.",
 		emoji: "🎬",
 		group: "vibes",
-		sources: [playlist("754776991"), playlist("2255653526")],
+		sources: [playlist("754776991")],
 	},
 	{
 		id: "disney",
