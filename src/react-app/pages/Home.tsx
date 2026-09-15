@@ -11,6 +11,14 @@ const games = [
 		path: "/songgame",
 	},
 	{
+		title: "songgame unlimited",
+		emoji: "🎧",
+		chip: "Endless",
+		tagline: "No daily cap. Pick an era, genre or artist, or bring your own Spotify or Apple Music playlist. Build a quiz and send it to a friend.",
+		path: "/songgame/unlimited",
+		isNew: true,
+	},
+	{
 		title: "colorgame",
 		emoji: "🎨",
 		chip: "Daily",
@@ -46,7 +54,7 @@ export function Home() {
 			<section className="games-section" id="games">
 				<div className="section-head">
 					<h2>The games</h2>
-					<p>Three so far. More on the workbench.</p>
+					<p>Four so far. More on the workbench.</p>
 				</div>
 				<div className="games-grid">
 					{games.map((game) => (

@@ -24,6 +24,10 @@ export function useClickSound() {
 export type AudioGraph = {
 	context: AudioContext;
 	gain: GainNode;
+	source: MediaElementAudioSourceNode;
+	compressor: DynamicsCompressorNode;
+	/** Whether the compressor is currently in the signal path. */
+	compressed: boolean;
 };
 
 const FADE_IN_SECONDS = 0.35;
@@ -34,8 +38,12 @@ export function gainFromSlider(sliderValue: number) {
 	return clamped * clamped;
 }
 
-export function createAudioGraph(audio: HTMLAudioElement): AudioGraph | null {
+export function createAudioGraph(
+	audio: HTMLAudioElement,
+	options: { compress?: boolean } = {},
+): AudioGraph | null {
 	if (typeof AudioContext === "undefined") return null;
+	const compress = options.compress ?? true;
 	try {
 		const context = new AudioContext();
 		const source = context.createMediaElementSource(audio);
@@ -47,13 +55,34 @@ export function createAudioGraph(audio: HTMLAudioElement): AudioGraph | null {
 		compressor.release.value = 0.25;
 		const gain = context.createGain();
 		gain.gain.value = 0;
-		source.connect(compressor);
-		compressor.connect(gain);
+		if (compress) {
+			source.connect(compressor);
+			compressor.connect(gain);
+		} else {
+			source.connect(gain);
+		}
 		gain.connect(context.destination);
-		return { context, gain };
+		return { context, gain, source, compressor, compressed: compress };
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * Routes the source through the compressor (leveled) or straight to the gain
+ * node (raw dynamics, for listeners who want the master untouched).
+ */
+export function setCompression(graph: AudioGraph, enabled: boolean) {
+	if (graph.compressed === enabled) return;
+	graph.source.disconnect();
+	graph.compressor.disconnect();
+	if (enabled) {
+		graph.source.connect(graph.compressor);
+		graph.compressor.connect(graph.gain);
+	} else {
+		graph.source.connect(graph.gain);
+	}
+	graph.compressed = enabled;
 }
 
 /** Fades from silence up to the target gain; call at the start of playback. */

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Home } from "./pages/Home";
 import { SongGame } from "./games/SongGame";
+import { SongGameUnlimited } from "./games/unlimited/SongGameUnlimited";
 import { ColorGame } from "./games/ColorGame";
 import { ChainGame } from "./games/ChainGame";
 import "./styles/layout.css";
@@ -16,12 +17,13 @@ function App() {
 	const path =
 		typeof window !== "undefined" ? window.location.pathname.replace(/\/$/, "") : "";
 	const isSongRoute = path === "/songgame";
+	const isUnlimitedRoute = path === "/songgame/unlimited" || path === "/unlimited";
 	const isColorRoute = path === "/colorgame";
 	const isChainRoute = path === "/chaingame" || path === "/nextwordgame";
 
 	useEffect(() => {
 		if (typeof document === "undefined") return;
-		const href = isSongRoute ? songFavicon : defaultFavicon;
+		const href = isSongRoute || isUnlimitedRoute ? songFavicon : defaultFavicon;
 		let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
 		if (!link) {
 			link = document.createElement("link");
@@ -30,7 +32,7 @@ function App() {
 			document.head.appendChild(link);
 		}
 		link.href = href;
-	}, [isSongRoute]);
+	}, [isSongRoute, isUnlimitedRoute]);
 
 	if (MAINTENANCE_MODE) {
 		return (
@@ -44,6 +46,7 @@ function App() {
 		);
 	}
 
+	if (isUnlimitedRoute) return <SongGameUnlimited />;
 	if (isSongRoute) return <SongGame />;
 	if (isColorRoute) return <ColorGame />;
 	if (isChainRoute) return <ChainGame />;
