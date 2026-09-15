@@ -29,6 +29,7 @@ export function PageShell({ page = "play", headerExtra, mainClassName, children 
 				<nav>
 					<a href="/" onClick={playClick}>home</a>
 					<a href="/songgame" onClick={playClick}>songgame</a>
+					<a href="/songgame/unlimited" onClick={playClick}>unlimited</a>
 					<a href="/colorgame" onClick={playClick}>colorgame</a>
 					<a href="/chaingame" onClick={playClick}>chaingame</a>
 				</nav>

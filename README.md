@@ -5,6 +5,7 @@ Small hand-built games by ChrisK Studios. New daily puzzles every night at midni
 ## The games
 
 - **songgame**: guess the song from a one-second snippet; every wrong guess unlocks a little more audio. Two categories daily (Oldies but Goodies, 2000s & Newer), plus a Holiday category in December.
+- **songgame unlimited** (`/songgame/unlimited`): endless rounds of five. Play by era, genre, vibe, artist, or import a public Spotify / Apple Music / Deezer playlist. Adjustable snippet ladders (down to 0.25s), random start points, raw-dynamics mode, artist exclusions, and shareable friend quizzes stored in D1.
 - **colorgame**: five daily colors, the same for everyone. Memorize each for four seconds, then rebuild it from memory with hue/saturation/brightness sliders.
 - **chaingame**: a daily word chain where each word pairs with the previous one ("apple pie", "pie crust"). Only first letters to go on; wrong guesses reveal more. Puzzles are scheduled in `src/react-app/games/chaingame-puzzles.ts`.
 
@@ -18,7 +19,7 @@ Small hand-built games by ChrisK Studios. New daily puzzles every night at midni
 ```
 src/
   react-app/
-    App.tsx              # route switch (/, /songgame, /colorgame)
+    App.tsx              # route switch (/, /songgame, /songgame/unlimited, /colorgame, /chaingame)
     components/          # shared UI (PageShell)
     pages/               # landing page
     games/               # one module per game

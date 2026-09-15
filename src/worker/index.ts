@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
+import { fetchDeezerTrack, isAlternateVersion, mapDeezerTrack, searchDeezerTracks } from "./deezer";
+import { unlimited } from "./unlimited";
 import {
 	BASE_CATEGORY_KEYS,
 	CATEGORY_DEFAULT_TRACKS,
@@ -7,21 +9,6 @@ import {
 	WEEKLY_TRACK_SCHEDULE,
 	type CategoryKey,
 } from "./schedule";
-
-type DeezerTrack = {
-	id?: number;
-	title?: string | null;
-	title_short?: string | null;
-	artist?: { name?: string | null } | null;
-	album?: { title?: string | null; cover_medium?: string | null; cover?: string | null } | null;
-	preview?: string | null;
-	duration?: number | null;
-	link?: string | null;
-};
-
-type DeezerSearchResponse = {
-	data?: DeezerTrack[];
-};
 
 type Bindings = {
 	ASSETS: Fetcher;
@@ -46,22 +33,9 @@ app.get("/api/music/search", async (c) => {
 	}
 
 	try {
-		const deezerResponse = await fetch(
-			`https://api.deezer.com/search/track?${new URLSearchParams({
-				q: query,
-				limit: "20",
-			}).toString()}`,
+		const tracks = (await searchDeezerTracks(query, 20)).filter((track) =>
+			track.name ? !isAlternateVersion(track.name) : true,
 		);
-
-		if (!deezerResponse.ok) {
-			return jsonError("Deezer search failed", deezerResponse.status);
-		}
-
-		const data = (await deezerResponse.json()) as DeezerSearchResponse;
-		const tracks = (data.data ?? [])
-			.map((item) => mapDeezerTrack(item))
-			.filter((track) => (track.name ? !isAlternateVersion(track.name) : true));
-
 		return c.json({ tracks });
 	} catch (error) {
 		console.error("Deezer search error", error);
@@ -72,6 +46,8 @@ app.get("/api/music/search", async (c) => {
 app.get("/api/music/daily", handleDailyTracks);
 // Older clients called this route "weekly"; keep it answering.
 app.get("/api/music/weekly", handleDailyTracks);
+
+app.route("/api/unlimited", unlimited);
 
 app.get("/api/music/archive", (c) => {
 	return c.json({
@@ -249,52 +225,3 @@ function getArchiveDates() {
 	return Object.keys(WEEKLY_TRACK_SCHEDULE).sort();
 }
 
-function isAlternateVersion(title: string) {
-	const lower = title.toLowerCase();
-	const keywordPatterns = [
-		"(live",
-		"live version",
-		"acoustic",
-		"karaoke",
-		"instrumental",
-		"edit",
-		"remix",
-		"mix)",
-		"mix ",
-		"cover",
-		"demo",
-		"version",
-		"wedding",
-		"extended",
-	];
-
-	if (/\(([^)]*remix|live|acoustic|version|edit|karaoke|instrumental|demo|cover|extended)[^)]*\)/i.test(title)) {
-		return true;
-	}
-
-	return keywordPatterns.some((keyword) => lower.includes(keyword));
-}
-
-async function fetchDeezerTrack(trackId: string) {
-	const response = await fetch(`https://api.deezer.com/track/${trackId}`);
-	if (!response.ok) {
-		throw new Error(`Failed to fetch track ${trackId} (${response.status})`);
-	}
-
-	const data = (await response.json()) as DeezerTrack;
-	return mapDeezerTrack(data);
-}
-
-function mapDeezerTrack(item: DeezerTrack) {
-	return {
-		id: item.id,
-		name: item.title ?? item.title_short ?? "",
-		artists: item.artist?.name ?? "",
-		album: item.album?.title ?? "",
-		artwork: item.album?.cover_medium ?? item.album?.cover ?? null,
-		previewUrl: item.preview ?? null,
-		duration: item.duration ?? null,
-		provider: "deezer",
-		url: item.link ?? null,
-	};
-}
