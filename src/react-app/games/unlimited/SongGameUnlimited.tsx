@@ -14,6 +14,7 @@ import {
 import {
 	ROUND_SIZE,
 	createSongState,
+	displayTitle,
 	formatSeconds,
 	ladderForSettings,
 	scoreEmoji,
@@ -471,7 +472,7 @@ export function SongGameUnlimited() {
 							<li key={`${song.track.id}-${index}`} className={song.status}>
 								{song.track.artwork ? <img src={song.track.artwork} alt="" /> : null}
 								<span className="ul-result-text">
-									<strong>{song.track.name}</strong>
+									<strong>{displayTitle(song.track.name)}</strong>
 									<small>{song.track.artists}</small>
 								</span>
 								<span className="ul-summary-score">
