@@ -4,6 +4,7 @@ import { searchTracks } from "./api";
 import {
 	FULL_REVEAL_SECONDS,
 	artistsOverlap,
+	displayTitle,
 	formatSeconds,
 	isCorrectGuess,
 	scoreForStep,
@@ -230,7 +231,7 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 									? `Got it in ${formatSeconds(ladder[song.solvedStep ?? 0])}s · +${solvedScore}`
 									: "Out of steps"}
 							</p>
-							<h2 className="ul-reveal-title">{song.track.name}</h2>
+							<h2 className="ul-reveal-title">{displayTitle(song.track.name)}</h2>
 							<p className="ul-reveal-artist">{song.track.artists}</p>
 							{song.track.album ? <p className="ul-reveal-album">{song.track.album}</p> : null}
 							<div className="ul-reveal-actions">
@@ -339,7 +340,7 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 								>
 									{track.artwork ? <img src={track.artwork} alt="" /> : null}
 									<span className="ul-result-text">
-										<strong>{track.name}</strong>
+										<strong>{displayTitle(track.name)}</strong>
 										<small>
 											{track.artists}
 											{track.album ? ` · ${track.album}` : ""}
@@ -360,13 +361,13 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 					if (guess) {
 						if (guess.correct) {
 							state = "correct";
-							label = guess.track?.name ?? "";
+							label = guess.track ? displayTitle(guess.track.name) : "";
 						} else if (guess.skipped) {
 							state = "skip";
 							label = "Skipped";
 						} else {
 							state = guess.artistMatch ? "artist" : "wrong";
-							label = guess.track ? `${guess.track.name} · ${guess.track.artists}` : "";
+							label = guess.track ? `${displayTitle(guess.track.name)} · ${guess.track.artists}` : "";
 						}
 					} else if (index === song.guesses.length && !isDone) {
 						state = "active";

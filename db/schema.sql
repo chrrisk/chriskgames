@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS quiz_results (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	quiz_id TEXT NOT NULL,
 	score INTEGER NOT NULL,
+	name TEXT NOT NULL DEFAULT '',
 	created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

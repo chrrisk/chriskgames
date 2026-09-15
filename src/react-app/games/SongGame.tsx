@@ -1055,6 +1055,9 @@ export function SongGame() {
 							</p>
 						) : null}
 						<p className="lab-hint next-reset-hint">Next songs in {resetCountdown}</p>
+						<p className="lab-hint">
+							Can't wait? <a href="/songgame/unlimited">Play unlimited</a> — any era, any playlist.
+						</p>
 						<div className="modal-actions">
 							<button
 								className="primary-btn"
