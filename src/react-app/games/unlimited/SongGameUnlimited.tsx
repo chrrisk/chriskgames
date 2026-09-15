@@ -57,6 +57,16 @@ export function SongGameUnlimited() {
 	const [error, setError] = useState<string | null>(null);
 	const [quizState, setQuizState] = useState<QuizState | null>(null);
 	const [quizResult, setQuizResult] = useState<QuizStats | null>(null);
+	const [playerName, setPlayerName] = useState(() => {
+		try {
+			return window.localStorage.getItem("unlimited-player-name") ?? "";
+		} catch {
+			return "";
+		}
+	});
+	const [nameDraft, setNameDraft] = useState("");
+	const [posting, setPosting] = useState(false);
+	const postedRef = useRef<string | null>(null);
 	const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 	const recordedRef = useRef<Set<string>>(new Set());
 	const player = useSnippetPlayer(settings.volume, settings.compress);
@@ -99,6 +109,7 @@ export function SongGameUnlimited() {
 			const songs = tracks.map((track) => createSongState(track, ladder, randomStart));
 			setSession({ source, ladder, songs, index: 0, finished: false, quizId });
 			setQuizResult(null);
+			postedRef.current = null;
 			setShareFeedback(null);
 			setError(null);
 			setScreen("play");
@@ -231,7 +242,7 @@ export function SongGameUnlimited() {
 	const previewQuiz = (tracks: TrackResult[], title: string, ladder: number[], randomStart: boolean) => {
 		const state: QuizState = {
 			quiz: { id: "preview", title, from: "", ladder, randomStart, tracks },
-			stats: { count: 0, average: null },
+			stats: { count: 0, average: null, leaderboard: [] },
 			preview: true,
 		};
 		setQuizState(state);
@@ -272,12 +283,38 @@ export function SongGameUnlimited() {
 		if (!session?.finished || screen !== "play") return;
 		setScreen("summary");
 		window.scrollTo({ top: 0, behavior: "smooth" });
-		if (session.quizId) {
-			void submitQuizResult(session.quizId, sessionScore(session))
-				.then((result) => setQuizResult(result))
-				.catch(() => undefined);
+		// A saved name posts straight to the leaderboard; otherwise the summary asks for one.
+		if (session.quizId && playerName) {
+			void postQuizScore(session.quizId, sessionScore(session), playerName);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [session, screen]);
+
+	const postQuizScore = async (quizId: string, score: number, name: string) => {
+		const key = `${quizId}:${name}`;
+		if (postedRef.current === key) return;
+		postedRef.current = key;
+		setPosting(true);
+		try {
+			setQuizResult(await submitQuizResult(quizId, score, name));
+		} catch {
+			postedRef.current = null;
+		} finally {
+			setPosting(false);
+		}
+	};
+
+	const saveNameAndPost = () => {
+		const name = nameDraft.trim().slice(0, 24);
+		if (!name || !session?.quizId) return;
+		setPlayerName(name);
+		try {
+			window.localStorage.setItem("unlimited-player-name", name);
+		} catch {
+			// ignore
+		}
+		void postQuizScore(session.quizId, sessionScore(session), name);
+	};
 
 	const backToLobby = () => {
 		player.stop();
@@ -382,6 +419,7 @@ export function SongGameUnlimited() {
 							{Math.round(quizState.stats.average)}%
 						</p>
 					) : null}
+					<Leaderboard entries={quizState.stats.leaderboard} highlight={playerName} />
 					<div className="ul-intro-actions">
 						<button type="button" className="primary-btn" onClick={() => { playClick(); startQuiz(quizState); }}>
 							Start quiz
@@ -452,6 +490,32 @@ export function SongGameUnlimited() {
 							</li>
 						))}
 					</ol>
+					{session.quizId ? (
+						<div className="ul-leaderboard-wrap">
+							{!playerName ? (
+								<div className="ul-inline-form">
+									<input
+										type="text"
+										value={nameDraft}
+										maxLength={24}
+										placeholder="Your name for the leaderboard"
+										aria-label="Your name for the leaderboard"
+										onChange={(event) => setNameDraft(event.target.value)}
+										onKeyDown={(event) => {
+											if (event.key === "Enter") {
+												event.preventDefault();
+												saveNameAndPost();
+											}
+										}}
+									/>
+									<button type="button" className="primary-btn" disabled={!nameDraft.trim() || posting} onClick={() => { playClick(); saveNameAndPost(); }}>
+										{posting ? "Posting…" : "Post score"}
+									</button>
+								</div>
+							) : null}
+							<Leaderboard entries={quizResult?.leaderboard ?? quizState?.stats.leaderboard ?? []} highlight={playerName} />
+						</div>
+					) : null}
 					<div className="ul-summary-actions">
 						<button type="button" className="primary-btn" onClick={() => { playClick(); playAgain(); }} disabled={busy}>
 							{session.source.kind === "quiz" ? "Play it again" : `5 more · ${session.source.title}`}
@@ -471,6 +535,21 @@ export function SongGameUnlimited() {
 				</section>
 			) : null}
 		</PageShell>
+	);
+}
+
+function Leaderboard({ entries, highlight }: { entries: { name: string; score: number }[]; highlight: string }) {
+	if (entries.length === 0) return null;
+	return (
+		<ol className="ul-leaderboard" aria-label="Leaderboard">
+			{entries.map((entry, index) => (
+				<li key={`${entry.name}-${index}`} className={entry.name === highlight ? "me" : ""}>
+					<span className="ul-leaderboard-rank">{index + 1}</span>
+					<span className="ul-leaderboard-name">{entry.name}</span>
+					<strong>{entry.score}%</strong>
+				</li>
+			))}
+		</ol>
 	);
 }
 

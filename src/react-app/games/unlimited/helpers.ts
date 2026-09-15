@@ -152,6 +152,15 @@ export function isCorrectGuess(guess: TrackResult, answer: TrackResult) {
 
 /* ─── Formatting ─── */
 
+/** Drops "(2009 Remaster)" style suffixes for display; matching uses the raw title. */
+export function displayTitle(name: string) {
+	const cleaned = name
+		.replace(/\s*[([][^)\]]*(remaster|mono|stereo|single version|album version|radio edit|explicit)[^)\]]*[)\]]/gi, "")
+		.replace(/\s*-\s*(\d{4}\s*)?remaster(ed)?(\s*\d{4})?\s*$/i, "")
+		.trim();
+	return cleaned || name;
+}
+
 export function formatSeconds(value: number) {
 	if (Number.isInteger(value)) return `${value}`;
 	return value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");

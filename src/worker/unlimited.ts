@@ -217,11 +217,7 @@ unlimited.get("/quiz/:id", async (c) => {
 				}),
 			)
 		).filter((track): track is MappedTrack => Boolean(track?.previewUrl));
-		const stats = await c.env.DB.prepare(
-			"SELECT COUNT(*) AS count, AVG(score) AS average FROM quiz_results WHERE quiz_id = ?1",
-		)
-			.bind(id)
-			.first<{ count: number; average: number | null }>();
+		const stats = await readQuizStats(c.env.DB, id);
 		return c.json({
 			quiz: {
 				id,
@@ -231,7 +227,7 @@ unlimited.get("/quiz/:id", async (c) => {
 				randomStart: payload.randomStart,
 				tracks,
 			},
-			stats: { count: stats?.count ?? 0, average: stats?.average ?? null },
+			stats,
 		});
 	} catch (error) {
 		console.error("Quiz read error", error);
@@ -242,7 +238,7 @@ unlimited.get("/quiz/:id", async (c) => {
 unlimited.post("/quiz/:id/result", async (c) => {
 	const id = c.req.param("id");
 	if (!/^[a-z0-9]{6,12}$/i.test(id)) return jsonError("Quiz not found", 404);
-	let body: { score?: unknown };
+	let body: { score?: unknown; name?: unknown };
 	try {
 		body = await c.req.json();
 	} catch {
@@ -252,21 +248,41 @@ unlimited.post("/quiz/:id/result", async (c) => {
 	if (!Number.isFinite(score) || score < 0 || score > 100) {
 		return jsonError("Score must be between 0 and 100", 400);
 	}
+	const name = cleanText(body.name, 24);
 	try {
-		await c.env.DB.prepare("INSERT INTO quiz_results (quiz_id, score) VALUES (?1, ?2)")
-			.bind(id, Math.round(score))
+		await c.env.DB.prepare("INSERT INTO quiz_results (quiz_id, score, name) VALUES (?1, ?2, ?3)")
+			.bind(id, Math.round(score), name)
 			.run();
-		const stats = await c.env.DB.prepare(
-			"SELECT COUNT(*) AS count, AVG(score) AS average FROM quiz_results WHERE quiz_id = ?1",
-		)
-			.bind(id)
-			.first<{ count: number; average: number | null }>();
-		return c.json({ count: stats?.count ?? 0, average: stats?.average ?? null });
+		return c.json(await readQuizStats(c.env.DB, id));
 	} catch (error) {
 		console.error("Quiz result error", error);
 		return jsonError("Unable to record the result", 500);
 	}
 });
+
+type QuizStats = {
+	count: number;
+	average: number | null;
+	leaderboard: { name: string; score: number }[];
+};
+
+async function readQuizStats(db: D1Database, quizId: string): Promise<QuizStats> {
+	const totals = await db
+		.prepare("SELECT COUNT(*) AS count, AVG(score) AS average FROM quiz_results WHERE quiz_id = ?1")
+		.bind(quizId)
+		.first<{ count: number; average: number | null }>();
+	const board = await db
+		.prepare(
+			"SELECT name, MAX(score) AS score FROM quiz_results WHERE quiz_id = ?1 AND name <> '' GROUP BY name ORDER BY score DESC, MIN(created_at) ASC LIMIT 10",
+		)
+		.bind(quizId)
+		.all<{ name: string; score: number }>();
+	return {
+		count: totals?.count ?? 0,
+		average: totals?.average ?? null,
+		leaderboard: board.results ?? [],
+	};
+}
 
 /* ─── Pool building ─── */
 

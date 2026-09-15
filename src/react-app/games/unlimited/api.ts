@@ -79,7 +79,7 @@ export type QuizPayload = {
 	tracks: TrackResult[];
 };
 
-export type QuizStats = { count: number; average: number | null };
+export type QuizStats = { count: number; average: number | null; leaderboard: { name: string; score: number }[] };
 
 export async function createQuiz(input: {
 	title: string;
@@ -104,12 +104,12 @@ export async function fetchQuiz(id: string) {
 	);
 }
 
-export async function submitQuizResult(id: string, score: number) {
+export async function submitQuizResult(id: string, score: number, name: string) {
 	return readJson<QuizStats>(
 		await fetch(`/api/unlimited/quiz/${encodeURIComponent(id)}/result`, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ score }),
+			body: JSON.stringify({ score, name }),
 		}),
 	);
 }
