@@ -468,7 +468,7 @@ async function fetchList(url: string, maxPages: number): Promise<MappedTrack[]> 
 /** Same as fetchList but stores the merged result in the Worker cache. */
 async function fetchCachedList(url: string, ttlSeconds: number, maxPages: number): Promise<MappedTrack[]> {
 	const cache = getCache();
-	const cacheKey = new Request(`https://unlimited-cache.local/${encodeURIComponent(url)}`);
+	const cacheKey = new Request(`https://unlimited-cache.local/v2/${encodeURIComponent(url)}`);
 	if (cache) {
 		const hit = await cache.match(cacheKey);
 		if (hit) {
