@@ -8,6 +8,7 @@ import {
 	formatSeconds,
 	isCorrectGuess,
 	scoreForStep,
+	searchPool,
 	type Guess,
 	type Session,
 	type Settings,
@@ -51,6 +52,7 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 	const retriedRef = useRef(false);
 
 	const { play, stop, preload, isPlaying, elapsedSeconds } = player;
+	const focused = settings.poolSearch && session.pool.length > 0;
 
 	// New song: reset search, stop audio, warm up the preview.
 	useEffect(() => {
@@ -74,11 +76,17 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 		if (isDone) nextRef.current?.focus({ preventScroll: true });
 	}, [isDone]);
 
-	// Debounced guess search.
+	// Guess search: instant over the round's pool, or debounced against Deezer.
 	useEffect(() => {
 		const trimmed = query.trim();
 		if (!trimmed) {
 			setResults([]);
+			setSearching(false);
+			setSearchError(null);
+			return;
+		}
+		if (focused) {
+			setResults(searchPool(session.pool, trimmed));
 			setSearching(false);
 			setSearchError(null);
 			return;
@@ -101,7 +109,7 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 			controller.abort();
 			window.clearTimeout(timeout);
 		};
-	}, [query]);
+	}, [query, focused, session.pool]);
 
 	// Keyboard: space toggles playback when not typing, enter advances after a reveal.
 	useEffect(() => {
@@ -346,7 +354,7 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 							ref={searchRef}
 							type="text"
 							value={query}
-							placeholder="Type a song or artist…"
+							placeholder={focused ? "Type a song or artist from this round's pool…" : "Type a song or artist…"}
 							aria-label="Guess the song"
 							autoComplete="off"
 							onChange={(event) => {
@@ -377,7 +385,11 @@ export function Player({ session, settings, player, onUpdateSong, onAdvance, onQ
 					</div>
 					{searchError ? <p className="ul-error">{searchError}</p> : null}
 					<div className={`ul-results${showResults ? " open" : ""}`} onMouseDown={(event) => event.preventDefault()}>
-						{results.length === 0 && !searching && query.trim() ? <p className="ul-hint">No matches yet. Try the artist name.</p> : null}
+						{results.length === 0 && !searching && query.trim() ? (
+							<p className="ul-hint">
+								{focused ? "Nothing in this round's pool matches. Try fewer letters or the artist." : "No matches yet. Try the artist name."}
+							</p>
+						) : null}
 						{results.map((track) => {
 							const used = alreadyGuessed(track);
 							return (

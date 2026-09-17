@@ -134,6 +134,27 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
 
 			<section className="ul-setting-group">
 				<div className="ul-setting-head">
+					<h4>Guessing</h4>
+				</div>
+				<label className="ul-switch">
+					<input
+						type="checkbox"
+						checked={settings.poolSearch}
+						onChange={(event) => update({ poolSearch: event.target.checked })}
+					/>
+					<span className="ul-switch-track" aria-hidden="true" />
+					<span className="ul-switch-text">
+						<strong>Focused search</strong>
+						<small>
+							Guesses only list songs this round could have picked, and the answer is always among them. Off searches all of
+							Deezer. Quizzes always use full search.
+						</small>
+					</span>
+				</label>
+			</section>
+
+			<section className="ul-setting-group">
+				<div className="ul-setting-head">
 					<h4>Skip artists</h4>
 					<p>Never hear these artists in any category.</p>
 				</div>

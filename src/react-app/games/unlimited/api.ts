@@ -17,10 +17,10 @@ export async function fetchRound(
 	const params = new URLSearchParams({ category: categoryId, count: String(count) });
 	if (excludedArtists.length) params.set("exclude", excludedArtists.join(","));
 	if (seen.length) params.set("seen", seen.slice(-150).join(","));
-	const data = await readJson<{ tracks: TrackResult[] }>(
+	const data = await readJson<{ tracks: TrackResult[]; pool?: TrackResult[] }>(
 		await fetch(`/api/unlimited/round?${params}`, { signal }),
 	);
-	return data.tracks;
+	return { tracks: data.tracks, pool: data.pool ?? [] };
 }
 
 export async function searchTracks(query: string, signal?: AbortSignal) {
