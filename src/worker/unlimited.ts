@@ -51,6 +51,8 @@ const ROUND_SIZE_MAX = 10;
 const POPULAR_RANK_FLOOR = 150_000;
 /** Fraction of a pool, sorted by popularity, that rounds draw from. */
 const POPULAR_SLICE = 0.6;
+/** Most pool entries sent back with a round for the client's focused search. */
+const POOL_CAP = 400;
 const IMPORT_TRACK_CAP = 500;
 const QUIZ_TRACK_CAP = 10;
 const PLAYLIST_CACHE_SECONDS = 6 * 60 * 60;
@@ -70,13 +72,13 @@ unlimited.get("/round", async (c) => {
 
 	try {
 		const pool = await buildPool(categoryId, count);
-		const picks = pickRound(pool, count, excludedArtists, seen);
+		const { picks, eligible } = pickRound(pool, count, excludedArtists, seen);
 		if (picks.length === 0) {
 			return jsonError("No playable songs found for that category right now", 502);
 		}
 		// Cached pools hold preview URLs that Deezer signs for only ~15 minutes,
 		// so the picks are re-fetched for fresh links right before they're played.
-		return c.json({ tracks: await refreshTracks(picks) });
+		return c.json({ tracks: await refreshTracks(picks), pool: poolSummary(eligible, picks) });
 	} catch (error) {
 		console.error("Unlimited round error", error);
 		return jsonError(error instanceof Error ? error.message : "Unable to build a round", 502);
@@ -385,6 +387,25 @@ async function refreshTracks(tracks: MappedTrack[]) {
 	return refreshed.filter((track): track is MappedTrack => track !== null);
 }
 
+/**
+ * The guessable pool sent alongside a round: the songs a round can draw from,
+ * most popular first, with the round's own picks always included so the
+ * client's focused search can never miss the answer.
+ */
+function poolSummary(eligible: MappedTrack[], picks: MappedTrack[]) {
+	const summary = new Map<string, Pick<MappedTrack, "id" | "name" | "artists" | "album" | "artwork">>();
+	const add = (track: MappedTrack) => {
+		if (!summary.has(track.id)) {
+			summary.set(track.id, { id: track.id, name: track.name, artists: track.artists, album: track.album, artwork: track.artwork });
+		}
+	};
+	picks.forEach(add);
+	[...eligible].sort((a, b) => b.rank - a.rank).forEach((track) => {
+		if (summary.size < POOL_CAP) add(track);
+	});
+	return [...summary.values()];
+}
+
 function pickRound(pool: MappedTrack[], count: number, excludedArtists: Set<string>, seen: Set<string>) {
 	const playable = pool.filter(
 		(track) =>
@@ -423,7 +444,7 @@ function pickRound(pool: MappedTrack[], count: number, excludedArtists: Set<stri
 		}
 		if (picks.length >= count) break;
 	}
-	return picks;
+	return { picks, eligible };
 }
 
 async function fetchSourceTracks(source: UnlimitedSource): Promise<MappedTrack[]> {

@@ -13,7 +13,9 @@ import {
 	type QuizStats,
 } from "./api";
 import {
+	POOL_SEARCH_MIN,
 	ROUND_SIZE,
+	buildPool,
 	createSongState,
 	displayTitle,
 	formatSeconds,
@@ -105,11 +107,21 @@ export function SongGameUnlimited() {
 	}, []);
 
 	const beginSession = useCallback(
-		(source: SessionSource, tracks: TrackResult[], ladderOverride?: number[] | null, randomStartOverride?: boolean, quizId?: string) => {
+		(
+			source: SessionSource,
+			tracks: TrackResult[],
+			candidates: TrackResult[] = [],
+			ladderOverride?: number[] | null,
+			randomStartOverride?: boolean,
+			quizId?: string,
+		) => {
 			const ladder = ladderOverride && ladderOverride.length >= 2 ? ladderOverride : ladderForSettings(settings);
 			const randomStart = randomStartOverride ?? settings.randomStart;
 			const songs = tracks.map((track) => createSongState(track, ladder, randomStart));
-			setSession({ source, ladder, songs, index: 0, finished: false, quizId });
+			// A pool too small to hide the answer in is no pool at all.
+			const merged = buildPool(tracks, candidates);
+			const pool = merged.length >= POOL_SEARCH_MIN ? merged : [];
+			setSession({ source, ladder, songs, index: 0, finished: false, quizId, pool });
 			setQuizResult(null);
 			postedRef.current = null;
 			setShareFeedback(null);
@@ -137,13 +149,13 @@ export function SongGameUnlimited() {
 		setBusy(true);
 		setError(null);
 		try {
-			const tracks = await fetchRound(source.id, ROUND_SIZE, settings.excludedArtists, loadSeen(source.id));
+			const { tracks, pool } = await fetchRound(source.id, ROUND_SIZE, settings.excludedArtists, loadSeen(source.id));
 			if (tracks.length === 0) throw new Error("No songs came back for that pick. Try another.");
 			markSeen(
 				source.id,
 				tracks.map((track) => track.id),
 			);
-			beginSession(source, tracks);
+			beginSession(source, tracks, pool);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Couldn't start a round");
 			setScreen("lobby");
@@ -212,9 +224,21 @@ export function SongGameUnlimited() {
 				playlist.key,
 				chosen.map(({ index }) => String(index)),
 			);
+			// Every playlist entry is guessable, resolved on Deezer or not.
+			const candidates: TrackResult[] = updatedTracks.map(
+				(track, index) =>
+					track.resolved ?? {
+						id: `${playlist.key}:${index}`,
+						name: track.name,
+						artists: track.artists,
+						album: track.album,
+						artwork: track.artwork,
+					},
+			);
 			beginSession(
 				{ kind: "playlist", id: playlist.key, title: playlist.name, emoji: "🎶", subtitle: `${providerLabel(playlist.provider)} playlist` },
 				await refreshDeezerTracks(chosen.map(({ track }) => track)),
+				candidates,
 			);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Couldn't start that playlist");
@@ -238,6 +262,7 @@ export function SongGameUnlimited() {
 				subtitle: quiz.from ? `From ${quiz.from}` : "A quiz from a friend",
 			},
 			tracks,
+			[],
 			quiz.ladder,
 			quiz.randomStart,
 			state.preview ? undefined : quiz.id,

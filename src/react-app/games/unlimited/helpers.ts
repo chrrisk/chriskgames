@@ -42,6 +42,8 @@ export type Settings = {
 	compress: boolean;
 	volume: number;
 	excludedArtists: string[];
+	/** Guess search only lists songs from the current round's pool. */
+	poolSearch: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -52,6 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
 	compress: true,
 	volume: 0.4,
 	excludedArtists: [],
+	poolSearch: true,
 };
 
 export function ladderForSettings(settings: Settings) {
@@ -94,7 +97,70 @@ export type Session = {
 	/** Set once every song is finished. */
 	finished: boolean;
 	quizId?: string;
+	/**
+	 * Every song the source could have picked, for focused search. Always
+	 * contains the session's own songs. Empty when the pool is unknown or too
+	 * small to hide the answer in (quizzes), which falls back to full search.
+	 */
+	pool: TrackResult[];
 };
+
+/* ─── Focused search (over the round's pool) ─── */
+
+export const POOL_SEARCH_MIN = 12;
+const POOL_SEARCH_LIMIT = 12;
+
+function searchKey(value: string) {
+	return value
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.replace(/['\u2019]/g, "")
+		.replace(/&/g, " and ")
+		.replace(/[^a-z0-9]+/g, " ")
+		.trim();
+}
+
+/** Songs (always first) then the rest of the pool, deduped by id. */
+export function buildPool(songs: TrackResult[], candidates: TrackResult[]) {
+	const pool = new Map<string, TrackResult>();
+	for (const track of [...songs, ...candidates]) {
+		if (track.id && !pool.has(track.id)) pool.set(track.id, track);
+	}
+	return [...pool.values()];
+}
+
+/**
+ * Forgiving local search: every word typed has to start some word of the
+ * title or artist (so "bohem que" finds Bohemian Rhapsody by Queen), or the
+ * whole phrase has to appear inside one of them. Title hits rank above artist
+ * hits; ties keep pool order, which is most popular first.
+ */
+export function searchPool(pool: TrackResult[], query: string) {
+	const phrase = searchKey(query);
+	if (!phrase) return [];
+	const words = phrase.split(" ");
+	const scored: { track: TrackResult; score: number; index: number }[] = [];
+	pool.forEach((track, index) => {
+		const title = searchKey(displayTitle(track.name));
+		const artist = searchKey(track.artists);
+		const titleWords = title.split(" ");
+		const artistWords = artist.split(" ");
+		const combinedWords = [...titleWords, ...artistWords];
+		let score = 0;
+		if (title.startsWith(phrase)) score = 6;
+		else if (artist.startsWith(phrase)) score = 5;
+		else if (title.includes(phrase)) score = 4;
+		else if (artist.includes(phrase)) score = 3;
+		else if (words.every((word) => titleWords.some((entry) => entry.startsWith(word)))) score = 2;
+		else if (words.every((word) => combinedWords.some((entry) => entry.startsWith(word)))) score = 1;
+		if (score > 0) scored.push({ track, score, index });
+	});
+	return scored
+		.sort((a, b) => b.score - a.score || a.index - b.index)
+		.slice(0, POOL_SEARCH_LIMIT)
+		.map((entry) => entry.track);
+}
 
 export function createSongState(track: TrackResult, ladder: number[], randomStart: boolean): SongState {
 	const maxStep = ladder[ladder.length - 1];
